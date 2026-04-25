@@ -1,0 +1,959 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pixel Art Converter</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+    :root {
+      --sky-a: #10233f;
+      --sky-b: #1f3f67;
+      --sky-c: #2d5b89;
+      --panel: #1a2f48;
+      --panel-dark: #102338;
+      --line-dark: #091424;
+      --line-light: #6ea4d7;
+      --text: #f4f8ff;
+      --muted: #bfd2ea;
+      --accent: #ffd23f;
+      --accent-shadow: #9b6f0f;
+      --cyan: #47d6ff;
+      --ok: #58de7a;
+      --danger: #ff7d76;
+      --checker-a: #24425f;
+      --checker-b: #1a334d;
+    }
+
+    * {
+      box-sizing: border-box;
+      image-rendering: pixelated;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'VT323', monospace;
+      font-size: 24px;
+      color: var(--text);
+      background:
+        linear-gradient(180deg, var(--sky-c) 0 14%, transparent 14% 100%),
+        repeating-linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.04) 0 2px,
+          transparent 2px 4px
+        ),
+        linear-gradient(180deg, var(--sky-a), var(--sky-b));
+      padding: 24px;
+    }
+
+    .shell {
+      max-width: 1320px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(310px, 420px) 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      position: relative;
+      background: linear-gradient(180deg, var(--panel), var(--panel-dark));
+      border: 4px solid var(--line-dark);
+      outline: 3px solid var(--line-light);
+      box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.35);
+    }
+
+    .panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.05) 0 2px,
+          transparent 2px 6px
+        );
+      mix-blend-mode: screen;
+      opacity: 0.3;
+    }
+
+    .controls {
+      padding: 18px;
+    }
+
+    .title {
+      margin: 0 0 10px;
+      font-family: 'Press Start 2P', monospace;
+      letter-spacing: 0.9px;
+      font-size: 16px;
+      line-height: 1.45;
+      color: var(--accent);
+      text-shadow: 2px 2px 0 var(--accent-shadow);
+    }
+
+    .subtitle {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 28px;
+      line-height: 1.1;
+    }
+
+    .field {
+      margin-bottom: 12px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.1;
+      color: var(--muted);
+      letter-spacing: 0.2px;
+    }
+
+    .hint strong {
+      color: var(--accent);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      line-height: 1.4;
+      color: #d3e7ff;
+      text-transform: uppercase;
+      letter-spacing: 0.45px;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      min-height: 44px;
+      border: 3px solid var(--line-dark);
+      outline: 2px solid #4f7baa;
+      border-radius: 0;
+      background: #162b43;
+      color: var(--text);
+      padding: 8px 10px;
+      font-family: 'VT323', monospace;
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    input:disabled,
+    select:disabled {
+      opacity: 0.56;
+      cursor: not-allowed;
+      filter: grayscale(0.25);
+    }
+
+    input:focus,
+    select:focus,
+    button:focus {
+      outline: 2px solid var(--cyan);
+      border-color: #0c1a2d;
+    }
+
+    input[type="checkbox"] {
+      width: 18px;
+      min-height: 18px;
+      border: 2px solid var(--line-dark);
+      outline: 2px solid #4f7baa;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0 10px;
+      font-family: 'VT323', monospace;
+      font-size: 28px;
+      line-height: 1;
+      color: #dbebff;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    button {
+      cursor: pointer;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      letter-spacing: 0.45px;
+      text-transform: uppercase;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+      transition: transform 80ms steps(2, end), filter 80ms steps(2, end);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.06);
+    }
+
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+    }
+
+    .btn-accent {
+      background: linear-gradient(180deg, #ffd861, #f59e22);
+      color: #1f1804;
+      border-color: #4b3205;
+      outline-color: #d28b24;
+    }
+
+    .btn-soft {
+      background: linear-gradient(180deg, #61d4ff, #2f77d9);
+      color: #081624;
+      border-color: #0b2c52;
+      outline-color: #4ca5f7;
+    }
+
+    .actions {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      border: 3px solid #0d1f36;
+      outline: 2px solid #4c739e;
+      background: rgba(18, 43, 70, 0.78);
+      font-family: 'VT323', monospace;
+      font-size: 26px;
+      line-height: 1.1;
+      color: #d5e8ff;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+    }
+
+    .status.ok {
+      border-color: #12412b;
+      outline-color: rgba(88, 222, 122, 0.64);
+      color: #bff6d0;
+    }
+
+    .status.err {
+      border-color: #4c1616;
+      outline-color: rgba(255, 125, 118, 0.6);
+      color: #ffd2cf;
+    }
+
+    .view {
+      padding: 12px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .view-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .card {
+      border: 3px solid var(--line-dark);
+      outline: 2px solid #4f7baa;
+      background: rgba(13, 31, 50, 0.84);
+    }
+
+    .card-head {
+      padding: 8px 10px;
+      border-bottom: 3px solid #0f2239;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      letter-spacing: 0.4px;
+      color: #d4e8ff;
+      text-transform: uppercase;
+      background:
+        linear-gradient(180deg, rgba(117, 168, 218, 0.16), rgba(30, 52, 79, 0.32));
+    }
+
+    .canvas-wrap {
+      display: grid;
+      place-items: center;
+      aspect-ratio: 1 / 1;
+      background:
+        linear-gradient(45deg, var(--checker-a) 25%, transparent 25%),
+        linear-gradient(-45deg, var(--checker-a) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, var(--checker-a) 75%),
+        linear-gradient(-45deg, transparent 75%, var(--checker-a) 75%),
+        var(--checker-b);
+      background-size: 24px 24px;
+      background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+      padding: 10px;
+    }
+
+    canvas {
+      max-width: 100%;
+      max-height: 100%;
+      border: 3px solid #0f2239;
+      outline: 2px solid #4575a9;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      background: #0d1a2b;
+    }
+
+    .palette {
+      min-height: 52px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+      gap: 6px;
+      padding: 12px;
+    }
+
+    .swatch {
+      height: 34px;
+      border: 2px solid #0c1d32;
+      outline: 1px solid rgba(210, 231, 255, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .swatch code {
+      position: absolute;
+      left: 4px;
+      bottom: 1px;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.92);
+      text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+      font-family: 'VT323', monospace;
+      line-height: 1;
+      letter-spacing: 0.25px;
+    }
+
+    @media (max-width: 1024px) {
+      body {
+        padding: 14px;
+      }
+
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .view-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        font-size: 20px;
+      }
+
+      .title {
+        font-size: 13px;
+      }
+
+      .subtitle {
+        font-size: 24px;
+      }
+
+      input,
+      select {
+        font-size: 24px;
+      }
+
+      button {
+        font-size: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="panel controls">
+      <h1 class="title">Pixel Art Converter</h1>
+      <p class="subtitle">
+        Faz upload da imagem, reduz para grid real e limita a paleta para deixar o sprite consistente.
+      </p>
+
+      <div class="field">
+        <label for="imageInput">Imagem</label>
+        <input id="imageInput" type="file" accept="image/*" />
+        <p class="hint">Ou cole com <strong>Ctrl+V</strong> / <strong>Cmd+V</strong> em qualquer lugar da tela.</p>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="targetWidth">Largura final (px)</label>
+          <input id="targetWidth" type="number" min="8" max="512" step="1" value="64" />
+        </div>
+        <div class="field">
+          <label for="targetHeight">Altura final (px)</label>
+          <input id="targetHeight" type="number" min="8" max="512" step="1" value="64" />
+        </div>
+      </div>
+
+      <label class="check" for="lockAspect">
+        <input id="lockAspect" type="checkbox" checked />
+        Manter proporcao original
+      </label>
+
+      <div class="field">
+        <label for="palettePreset">Paleta predefinida</label>
+        <select id="palettePreset">
+          <option value="auto">Auto (k-means)</option>
+          <option value="gameboy">Game Boy (4)</option>
+          <option value="pico8">PICO-8 (16)</option>
+          <option value="dawnbringer16">DawnBringer16 (16)</option>
+          <option value="c64">Commodore 64 (16)</option>
+          <option value="endesga32">Endesga 32 (32)</option>
+          <option value="masterSystem">Master System (32)</option>
+        </select>
+        <p class="hint">Auto cria paleta da imagem. As demais usam paletas fixas retro.</p>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="numColors">Cores (paleta)</label>
+          <input id="numColors" type="number" min="2" max="64" step="1" value="16" />
+        </div>
+        <div class="field">
+          <label for="iterations">Iteracoes k-means</label>
+          <input id="iterations" type="number" min="1" max="20" step="1" value="8" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="previewScale">Escala preview (x)</label>
+          <input id="previewScale" type="number" min="1" max="24" step="1" value="8" />
+        </div>
+        <div class="field">
+          <label for="downloadMode">Download</label>
+          <select id="downloadMode">
+            <option value="low">Sprite real (baixa resolucao)</option>
+            <option value="scaled">Imagem ampliada</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="check" for="useDither">
+        <input id="useDither" type="checkbox" />
+        Aplicar dithering (Floyd-Steinberg)
+      </label>
+
+      <div class="actions">
+        <button id="convertBtn" class="btn-accent" type="button">Converter para Pixel Art</button>
+        <button id="downloadBtn" class="btn-soft" type="button" disabled>Baixar PNG</button>
+      </div>
+
+      <div id="status" class="status">Aguardando imagem...</div>
+    </section>
+
+    <section class="panel view">
+      <div class="view-grid">
+        <article class="card">
+          <div class="card-head">Entrada</div>
+          <div class="canvas-wrap">
+            <canvas id="inputCanvas" width="420" height="420"></canvas>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">Saida Pixel Art</div>
+          <div class="canvas-wrap">
+            <canvas id="outputCanvas" width="420" height="420"></canvas>
+          </div>
+        </article>
+      </div>
+
+      <article class="card">
+        <div class="card-head">Paleta final</div>
+        <div id="palette" class="palette"></div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const imageInput = document.getElementById('imageInput');
+    const targetWidthInput = document.getElementById('targetWidth');
+    const targetHeightInput = document.getElementById('targetHeight');
+    const lockAspectInput = document.getElementById('lockAspect');
+    const palettePresetInput = document.getElementById('palettePreset');
+    const numColorsInput = document.getElementById('numColors');
+    const iterationsInput = document.getElementById('iterations');
+    const previewScaleInput = document.getElementById('previewScale');
+    const useDitherInput = document.getElementById('useDither');
+    const downloadModeInput = document.getElementById('downloadMode');
+    const convertBtn = document.getElementById('convertBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const statusEl = document.getElementById('status');
+    const paletteEl = document.getElementById('palette');
+    const inputCanvas = document.getElementById('inputCanvas');
+    const outputCanvas = document.getElementById('outputCanvas');
+
+    const state = {
+      image: null,
+      fileName: 'pixel_art',
+      lowResCanvas: null,
+      scaledCanvas: null,
+      palette: []
+    };
+
+    const PRESET_PALETTES = {
+      gameboy: {
+        label: 'Game Boy (4)',
+        colors: ['#0f380f', '#306230', '#8bac0f', '#9bbc0f']
+      },
+      pico8: {
+        label: 'PICO-8 (16)',
+        colors: ['#000000', '#1d2b53', '#7e2553', '#008751', '#ab5236', '#5f574f', '#c2c3c7', '#fff1e8', '#ff004d', '#ffa300', '#ffec27', '#00e436', '#29adff', '#83769c', '#ff77a8', '#ffccaa']
+      },
+      dawnbringer16: {
+        label: 'DawnBringer16 (16)',
+        colors: ['#140c1c', '#442434', '#30346d', '#4e4a4e', '#854c30', '#346524', '#d04648', '#757161', '#597dce', '#d27d2c', '#8595a1', '#6daa2c', '#d2aa99', '#6dc2ca', '#dad45e', '#deeed6']
+      },
+      c64: {
+        label: 'Commodore 64 (16)',
+        colors: ['#000000', '#ffffff', '#68372b', '#70a4b2', '#6f3d86', '#588d43', '#352879', '#b8c76f', '#6f4f25', '#433900', '#9a6759', '#444444', '#6c6c6c', '#9ad284', '#6c5eb5', '#959595']
+      },
+      endesga32: {
+        label: 'Endesga 32 (32)',
+        colors: ['#be4a2f', '#d77643', '#ead4aa', '#e4a672', '#b86f50', '#733e39', '#3e2731', '#a22633', '#e43b44', '#f77622', '#feae34', '#fee761', '#63c74d', '#3e8948', '#265c42', '#193c3e', '#124e89', '#0099db', '#2ce8f5', '#ffffff', '#c0cbdc', '#8b9bb4', '#5a6988', '#3a4466', '#262b44', '#181425', '#ff0044', '#68386c', '#b55088', '#f6757a', '#e8b796', '#c28569']
+      },
+      masterSystem: {
+        label: 'Master System (32)',
+        colors: ['#000000', '#0000aa', '#00aa00', '#00aaaa', '#aa0000', '#aa00aa', '#aa5500', '#aaaaaa', '#555555', '#5555ff', '#55ff55', '#55ffff', '#ff5555', '#ff55ff', '#ffff55', '#ffffff', '#000055', '#005500', '#005555', '#550000', '#550055', '#553300', '#555500', '#003355', '#335500', '#553355', '#335555', '#772200', '#227700', '#774477', '#447777', '#777744']
+      }
+    };
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function setStatus(message, tone = 'info') {
+      statusEl.textContent = message;
+      statusEl.className = 'status';
+      if (tone === 'ok') statusEl.classList.add('ok');
+      if (tone === 'err') statusEl.classList.add('err');
+    }
+
+    function getCleanInt(inputEl, min, max, fallback) {
+      const value = Number.parseInt(inputEl.value, 10);
+      const safeValue = Number.isFinite(value) ? value : fallback;
+      const clamped = clamp(safeValue, min, max);
+      inputEl.value = String(clamped);
+      return clamped;
+    }
+
+    function drawImageFit(canvas, source, smooth) {
+      const ctx = canvas.getContext('2d');
+      const canvasW = canvas.width;
+      const canvasH = canvas.height;
+      const ratio = Math.min(canvasW / source.width, canvasH / source.height);
+      const drawW = Math.max(1, Math.round(source.width * ratio));
+      const drawH = Math.max(1, Math.round(source.height * ratio));
+      const x = Math.floor((canvasW - drawW) / 2);
+      const y = Math.floor((canvasH - drawH) / 2);
+
+      ctx.clearRect(0, 0, canvasW, canvasH);
+      ctx.imageSmoothingEnabled = smooth;
+      ctx.drawImage(source, x, y, drawW, drawH);
+    }
+
+    function rgbToHex(r, g, b) {
+      const toHex = (v) => v.toString(16).padStart(2, '0');
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    function hexToRgb(hex) {
+      const normalized = (hex || '').replace('#', '');
+      if (normalized.length !== 6) return [0, 0, 0];
+      const value = Number.parseInt(normalized, 16);
+      if (!Number.isFinite(value)) return [0, 0, 0];
+      return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+    }
+
+    function syncPaletteMode() {
+      const useAuto = palettePresetInput.value === 'auto';
+      numColorsInput.disabled = !useAuto;
+      iterationsInput.disabled = !useAuto;
+    }
+
+    function getWorkingPalette(imageData, numColors, iterations) {
+      const presetKey = palettePresetInput.value;
+      if (presetKey === 'auto') {
+        const colors = buildPaletteKmeans(imageData.data, numColors, iterations);
+        return { label: `Auto (${colors.length})`, colors };
+      }
+
+      const preset = PRESET_PALETTES[presetKey];
+      if (!preset) {
+        const colors = buildPaletteKmeans(imageData.data, numColors, iterations);
+        return { label: `Auto (${colors.length})`, colors };
+      }
+
+      return { label: preset.label, colors: preset.colors.map(hexToRgb) };
+    }
+
+    function nearestColorIndex(r, g, b, palette) {
+      let winner = 0;
+      let bestDist = Infinity;
+
+      for (let i = 0; i < palette.length; i += 1) {
+        const color = palette[i];
+        const dr = r - color[0];
+        const dg = g - color[1];
+        const db = b - color[2];
+        const dist = (dr * dr) + (dg * dg) + (db * db);
+        if (dist < bestDist) {
+          bestDist = dist;
+          winner = i;
+        }
+      }
+
+      return winner;
+    }
+
+    function pickInitialCentroids(samples, k) {
+      if (samples.length === 0) return [[0, 0, 0]];
+
+      const centroids = [];
+      centroids.push(samples[Math.floor(Math.random() * samples.length)].slice());
+
+      while (centroids.length < k) {
+        const distances = new Float64Array(samples.length);
+        let total = 0;
+
+        for (let i = 0; i < samples.length; i += 1) {
+          const [sr, sg, sb] = samples[i];
+          let nearest = Infinity;
+
+          for (let j = 0; j < centroids.length; j += 1) {
+            const [cr, cg, cb] = centroids[j];
+            const dr = sr - cr;
+            const dg = sg - cg;
+            const db = sb - cb;
+            const dist = (dr * dr) + (dg * dg) + (db * db);
+            if (dist < nearest) nearest = dist;
+          }
+
+          distances[i] = nearest;
+          total += nearest;
+        }
+
+        if (total === 0) {
+          centroids.push(samples[Math.floor(Math.random() * samples.length)].slice());
+          continue;
+        }
+
+        let threshold = Math.random() * total;
+        let index = 0;
+        for (let i = 0; i < distances.length; i += 1) {
+          threshold -= distances[i];
+          if (threshold <= 0) {
+            index = i;
+            break;
+          }
+        }
+
+        centroids.push(samples[index].slice());
+      }
+
+      return centroids;
+    }
+
+    function buildPaletteKmeans(data, k, iterations) {
+      const pixelCount = data.length / 4;
+      const maxSamples = 12000;
+      const jump = Math.max(1, Math.floor(pixelCount / maxSamples));
+      const samples = [];
+
+      for (let i = 0; i < pixelCount; i += jump) {
+        const idx = i * 4;
+        const a = data[idx + 3];
+        if (a < 12) continue;
+        samples.push([data[idx], data[idx + 1], data[idx + 2]]);
+      }
+
+      if (samples.length === 0) {
+        return [[0, 0, 0]];
+      }
+
+      const paletteSize = clamp(k, 1, samples.length);
+      let centroids = pickInitialCentroids(samples, paletteSize);
+
+      for (let step = 0; step < iterations; step += 1) {
+        const sums = new Array(paletteSize).fill(null).map(() => [0, 0, 0]);
+        const counts = new Array(paletteSize).fill(0);
+
+        for (let i = 0; i < samples.length; i += 1) {
+          const [r, g, b] = samples[i];
+          const nearest = nearestColorIndex(r, g, b, centroids);
+          sums[nearest][0] += r;
+          sums[nearest][1] += g;
+          sums[nearest][2] += b;
+          counts[nearest] += 1;
+        }
+
+        for (let i = 0; i < paletteSize; i += 1) {
+          if (counts[i] === 0) {
+            centroids[i] = samples[Math.floor(Math.random() * samples.length)].slice();
+            continue;
+          }
+
+          centroids[i] = [
+            Math.round(sums[i][0] / counts[i]),
+            Math.round(sums[i][1] / counts[i]),
+            Math.round(sums[i][2] / counts[i])
+          ];
+        }
+      }
+
+      return centroids;
+    }
+
+    function quantizeWithoutDither(imageData, palette) {
+      const data = imageData.data;
+      const colorCache = new Map();
+
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] < 12) continue;
+
+        const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+        let picked = colorCache.get(key);
+
+        if (!picked) {
+          const idx = nearestColorIndex(data[i], data[i + 1], data[i + 2], palette);
+          picked = palette[idx];
+          colorCache.set(key, picked);
+        }
+
+        data[i] = picked[0];
+        data[i + 1] = picked[1];
+        data[i + 2] = picked[2];
+      }
+    }
+
+    function applyFloydSteinbergDither(imageData, palette) {
+      const width = imageData.width;
+      const height = imageData.height;
+      const data = imageData.data;
+      const work = new Float32Array(data.length);
+
+      for (let i = 0; i < data.length; i += 1) {
+        work[i] = data[i];
+      }
+
+      const spread = (x, y, rErr, gErr, bErr, factor) => {
+        if (x < 0 || x >= width || y < 0 || y >= height) return;
+        const idx = ((y * width) + x) * 4;
+        if (work[idx + 3] < 12) return;
+        work[idx] += rErr * factor;
+        work[idx + 1] += gErr * factor;
+        work[idx + 2] += bErr * factor;
+      };
+
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          const idx = ((y * width) + x) * 4;
+          if (work[idx + 3] < 12) continue;
+
+          const oldR = work[idx];
+          const oldG = work[idx + 1];
+          const oldB = work[idx + 2];
+
+          const nearest = palette[nearestColorIndex(oldR, oldG, oldB, palette)];
+          const newR = nearest[0];
+          const newG = nearest[1];
+          const newB = nearest[2];
+
+          data[idx] = newR;
+          data[idx + 1] = newG;
+          data[idx + 2] = newB;
+
+          const rErr = oldR - newR;
+          const gErr = oldG - newG;
+          const bErr = oldB - newB;
+
+          spread(x + 1, y, rErr, gErr, bErr, 7 / 16);
+          spread(x - 1, y + 1, rErr, gErr, bErr, 3 / 16);
+          spread(x, y + 1, rErr, gErr, bErr, 5 / 16);
+          spread(x + 1, y + 1, rErr, gErr, bErr, 1 / 16);
+        }
+      }
+    }
+
+    function updatePaletteUI(palette) {
+      paletteEl.innerHTML = '';
+      if (!palette || palette.length === 0) return;
+
+      palette.forEach(([r, g, b]) => {
+        const item = document.createElement('div');
+        item.className = 'swatch';
+        item.style.background = `rgb(${r}, ${g}, ${b})`;
+
+        const label = document.createElement('code');
+        label.textContent = rgbToHex(r, g, b);
+
+        item.appendChild(label);
+        paletteEl.appendChild(item);
+      });
+    }
+
+    function updateHeightFromWidth() {
+      if (!state.image || !lockAspectInput.checked) return;
+      const width = getCleanInt(targetWidthInput, 8, 512, 64);
+      const ratio = state.image.height / state.image.width;
+      const computedHeight = clamp(Math.round(width * ratio), 8, 512);
+      targetHeightInput.value = String(computedHeight);
+    }
+
+    function handleImageFile(file, source = 'upload') {
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        setStatus('Arquivo invalido. Use uma imagem (PNG, JPG, WebP...).', 'err');
+        return;
+      }
+
+      const img = new Image();
+      img.onload = () => {
+        state.image = img;
+        const rawName = file.name && file.name.trim() ? file.name : `imagem_colada_${Date.now()}.png`;
+        state.fileName = rawName.replace(/\.[^.]+$/, '') || 'pixel_art';
+        updateHeightFromWidth();
+        drawImageFit(inputCanvas, img, true);
+        drawImageFit(outputCanvas, img, false);
+        if (source === 'paste') {
+          setStatus('Imagem colada com sucesso. Clique em converter.', 'ok');
+          return;
+        }
+        setStatus('Imagem carregada. Clique em converter.', 'ok');
+      };
+      img.onerror = () => setStatus('Nao foi possivel ler a imagem.', 'err');
+
+      img.src = URL.createObjectURL(file);
+    }
+
+    function handlePaste(event) {
+      const items = event.clipboardData?.items;
+      if (!items || items.length === 0) return;
+
+      for (const item of items) {
+        if (!item.type.startsWith('image/')) continue;
+        const pastedFile = item.getAsFile();
+        if (!pastedFile) continue;
+        event.preventDefault();
+        handleImageFile(pastedFile, 'paste');
+        return;
+      }
+    }
+
+    function convertImage() {
+      if (!state.image) {
+        setStatus('Envie uma imagem primeiro.', 'err');
+        return;
+      }
+
+      const targetW = getCleanInt(targetWidthInput, 8, 512, 64);
+      let targetH = getCleanInt(targetHeightInput, 8, 512, 64);
+      if (lockAspectInput.checked) {
+        const ratio = state.image.height / state.image.width;
+        targetH = clamp(Math.round(targetW * ratio), 8, 512);
+        targetHeightInput.value = String(targetH);
+      }
+
+      const numColors = getCleanInt(numColorsInput, 2, 64, 16);
+      const iterations = getCleanInt(iterationsInput, 1, 20, 8);
+      const previewScale = getCleanInt(previewScaleInput, 1, 24, 8);
+      const useDither = useDitherInput.checked;
+
+      setStatus('Convertendo...');
+
+      window.requestAnimationFrame(() => {
+        const lowCanvas = document.createElement('canvas');
+        lowCanvas.width = targetW;
+        lowCanvas.height = targetH;
+        const lowCtx = lowCanvas.getContext('2d', { willReadFrequently: true });
+
+        lowCtx.imageSmoothingEnabled = false;
+        lowCtx.clearRect(0, 0, targetW, targetH);
+        lowCtx.drawImage(state.image, 0, 0, targetW, targetH);
+
+        const imageData = lowCtx.getImageData(0, 0, targetW, targetH);
+        const paletteSelection = getWorkingPalette(imageData, numColors, iterations);
+        const palette = paletteSelection.colors;
+
+        if (useDither) {
+          applyFloydSteinbergDither(imageData, palette);
+        } else {
+          quantizeWithoutDither(imageData, palette);
+        }
+
+        lowCtx.putImageData(imageData, 0, 0);
+
+        const scaledCanvas = document.createElement('canvas');
+        scaledCanvas.width = targetW * previewScale;
+        scaledCanvas.height = targetH * previewScale;
+        const scaledCtx = scaledCanvas.getContext('2d');
+        scaledCtx.imageSmoothingEnabled = false;
+        scaledCtx.drawImage(lowCanvas, 0, 0, scaledCanvas.width, scaledCanvas.height);
+
+        state.lowResCanvas = lowCanvas;
+        state.scaledCanvas = scaledCanvas;
+        state.palette = palette;
+
+        drawImageFit(outputCanvas, scaledCanvas, false);
+        updatePaletteUI(palette);
+
+        downloadBtn.disabled = false;
+        setStatus(
+          `Pronto: ${targetW}x${targetH}px, ${palette.length} cores, paleta ${paletteSelection.label}, escala ${previewScale}x.`,
+          'ok'
+        );
+      });
+    }
+
+    function downloadResult() {
+      if (!state.lowResCanvas || !state.scaledCanvas) {
+        setStatus('Converta a imagem antes de baixar.', 'err');
+        return;
+      }
+
+      const mode = downloadModeInput.value;
+      const canvasToSave = mode === 'scaled' ? state.scaledCanvas : state.lowResCanvas;
+      const suffix = mode === 'scaled' ? 'scaled' : 'sprite';
+
+      const link = document.createElement('a');
+      link.href = canvasToSave.toDataURL('image/png');
+      link.download = `${state.fileName}_${suffix}_${canvasToSave.width}x${canvasToSave.height}.png`;
+      link.click();
+
+      setStatus(`Download iniciado (${canvasToSave.width}x${canvasToSave.height}).`, 'ok');
+    }
+
+    imageInput.addEventListener('change', (event) => {
+      handleImageFile(event.target.files?.[0]);
+    });
+
+    palettePresetInput.addEventListener('change', syncPaletteMode);
+    targetWidthInput.addEventListener('input', updateHeightFromWidth);
+    lockAspectInput.addEventListener('change', updateHeightFromWidth);
+    document.addEventListener('paste', handlePaste);
+
+    convertBtn.addEventListener('click', convertImage);
+    downloadBtn.addEventListener('click', downloadResult);
+
+    syncPaletteMode();
+  </script>
+</body>
+</html>
