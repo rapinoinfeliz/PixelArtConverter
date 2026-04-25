@@ -662,7 +662,10 @@
       </div>
 
       <article class="card">
-        <div class="card-head">Paleta final</div>
+        <div class="card-head" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Paleta final</span>
+          <button id="undoBtn" class="btn-soft" style="padding: 2px 8px; font-size: 12px; height: 24px;" type="button" disabled title="Desfazer última mescla (Ctrl+Z)">↩️ Desfazer</button>
+        </div>
         <div id="palette" class="palette"></div>
         <div class="palette-actions">
           <button id="savePaletteBtn" class="btn-soft" type="button" disabled>💾 Salvar Paleta Atual</button>
@@ -688,6 +691,7 @@
       const statusEl = document.getElementById('status');
       const paletteEl = document.getElementById('palette');
       const savePaletteBtn = document.getElementById('savePaletteBtn');
+      const undoBtn = document.getElementById('undoBtn');
       const autoDetectScaleBtn = document.getElementById('autoDetectScaleBtn');
       const dropZone = document.getElementById('dropZone');
       const inputWrap = document.getElementById('inputWrap');
@@ -700,7 +704,10 @@
         fileName: 'pixel_art',
         lowResCanvas: null,
         scaledCanvas: null,
-        palette: [],
+        palette: null,
+        workingData: null,
+        hiddenColors: null,
+        history: [],
         viewerZoom: 1,
         viewerZoomTarget: 1,
         viewerZoomAnimFrame: null,
@@ -968,24 +975,56 @@
         return colors;
       }
 
+      function sortPaletteColors(colors) {
+        if (!colors || colors.length <= 1) return colors;
+        const sorted = [];
+        const pool = [...colors];
+        
+        let startIdx = 0;
+        let minLum = Infinity;
+        for(let i=0; i<pool.length; i++) {
+           const lum = pool[i][0]*0.299 + pool[i][1]*0.587 + pool[i][2]*0.114;
+           if(lum < minLum) { minLum = lum; startIdx = i; }
+        }
+        
+        sorted.push(pool.splice(startIdx, 1)[0]);
+        
+        while(pool.length > 0) {
+           const last = sorted[sorted.length-1];
+           let bestIdx = 0;
+           let minDist = Infinity;
+           for(let i=0; i<pool.length; i++) {
+              const c = pool[i];
+              const dr = c[0]-last[0], dg = c[1]-last[1], db = c[2]-last[2];
+              const dist = dr*dr + dg*dg + db*db;
+              if(dist < minDist) { minDist = dist; bestIdx = i; }
+           }
+           sorted.push(pool.splice(bestIdx, 1)[0]);
+        }
+        return sorted;
+      }
+
       function getWorkingPalette(imageData, numColors, iterations) {
         const presetKey = palettePresetInput.value;
+        let finalColors = [];
+        let label = '';
         if (presetKey === 'detect') {
-          const colors = extractOriginalPalette(imageData.data);
-          return { label: `Detectada (${colors.length})`, colors };
+          finalColors = extractOriginalPalette(imageData.data);
+          label = `Detectada (${finalColors.length})`;
+        } else if (presetKey === 'auto') {
+          finalColors = buildPaletteKmeans(imageData.data, numColors, iterations);
+          label = `Auto (${finalColors.length})`;
+        } else {
+          const preset = PRESET_PALETTES[presetKey];
+          if (!preset) {
+            finalColors = buildPaletteKmeans(imageData.data, numColors, iterations);
+            label = `Auto (${finalColors.length})`;
+          } else {
+            finalColors = preset.colors.map(hexToRgb);
+            label = preset.label;
+          }
         }
-        if (presetKey === 'auto') {
-          const colors = buildPaletteKmeans(imageData.data, numColors, iterations);
-          return { label: `Auto (${colors.length})`, colors };
-        }
-
-        const preset = PRESET_PALETTES[presetKey];
-        if (!preset) {
-          const colors = buildPaletteKmeans(imageData.data, numColors, iterations);
-          return { label: `Auto (${colors.length})`, colors };
-        }
-
-        return { label: preset.label, colors: preset.colors.map(hexToRgb) };
+        return { label, colors: sortPaletteColors(finalColors) };
       }
 
       function nearestColorIndex(r, g, b, palette) {
@@ -1183,8 +1222,34 @@
         }
       }
 
+      function saveStateToHistory() {
+        state.history.push({
+          workingData: new Uint8ClampedArray(state.workingData),
+          palette: JSON.parse(JSON.stringify(state.palette)),
+          hiddenColors: state.hiddenColors ? new Set(state.hiddenColors) : new Set()
+        });
+        undoBtn.disabled = false;
+      }
+
+      function undoLastAction() {
+        if (state.history.length === 0) return;
+        const lastState = state.history.pop();
+        
+        state.workingData = lastState.workingData;
+        state.palette = lastState.palette;
+        state.hiddenColors = lastState.hiddenColors;
+        
+        undoBtn.disabled = state.history.length === 0;
+        
+        renderWorkingData();
+        updatePaletteUI(state.palette);
+        setStatus('Ação desfeita.', 'ok');
+      }
+
       function mergeColors(sourceHex, targetHex) {
         if (!state.lowResCanvas || !state.palette || !state.workingData) return;
+        
+        saveStateToHistory();
         
         const srcRgb = hexToRgb(sourceHex);
         const tgtRgb = hexToRgb(targetHex);
@@ -1590,6 +1655,8 @@
           
           state.workingData = new Uint8ClampedArray(imageData.data);
           state.hiddenColors = new Set();
+          state.history = [];
+          undoBtn.disabled = true;
 
           lowCtx.putImageData(imageData, 0, 0);
 
@@ -1720,6 +1787,7 @@
       convertBtn.addEventListener('click', convertImage);
       downloadBtn.addEventListener('click', downloadResult);
       autoDetectScaleBtn.addEventListener('click', detectOptimalSize);
+      undoBtn.addEventListener('click', undoLastAction);
       autoDetectScaleBtn.addEventListener('click', detectOptimalSize);
 
       savePaletteBtn.addEventListener('click', () => {
@@ -1762,6 +1830,9 @@
           } else if (event.key === 's') {
             event.preventDefault();
             downloadResult();
+          } else if (event.key === 'z') {
+            event.preventDefault();
+            undoLastAction();
           }
         }
       });
