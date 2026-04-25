@@ -1766,27 +1766,38 @@
         ctx.drawImage(state.image, 0, 0);
         const data = ctx.getImageData(0, 0, w, h).data;
         
-        const clusters = [];
-        for (let i = 0; i < data.length; i += 16) {
+        const colorCounts = {};
+        let totalPixels = 0;
+        
+        for (let i = 0; i < data.length; i += 4) {
            if (data[i+3] >= 12) {
-              const r = data[i], g = data[i+1], b = data[i+2];
-              let found = false;
-              for (let c = 0; c < clusters.length; c++) {
-                 const cr = clusters[c][0], cg = clusters[c][1], cb = clusters[c][2];
-                 const dist = (r-cr)*(r-cr) + (g-cg)*(g-cg) + (b-cb)*(b-cb);
-                 if (dist < 1500) {
-                    found = true;
-                    break;
-                 }
-              }
-              if (!found) {
-                 clusters.push([r, g, b]);
-                 if (clusters.length >= 64) break;
-              }
+              const r = data[i] >> 4;
+              const g = data[i+1] >> 4;
+              const b = data[i+2] >> 4;
+              const key = (r << 8) | (g << 4) | b;
+              colorCounts[key] = (colorCounts[key] || 0) + 1;
+              totalPixels++;
            }
         }
-        if (clusters.length > 0 && palettePresetInput.value === 'auto') {
-           numColorsInput.value = Math.min(Math.max(clusters.length, 2), 64);
+        
+        const sortedCounts = Object.values(colorCounts).sort((a, b) => b - a);
+        let detectedK = 0;
+        
+        if (sortedCounts.length <= 32) {
+            detectedK = sortedCounts.length;
+        } else {
+            let coverage = 0;
+            const targetCoverage = totalPixels * 0.96;
+            for (let i = 0; i < sortedCounts.length; i++) {
+               coverage += sortedCounts[i];
+               detectedK++;
+               if (coverage >= targetCoverage) break;
+               if (detectedK >= 64) break;
+            }
+        }
+        
+        if (detectedK > 0 && palettePresetInput.value === 'auto') {
+           numColorsInput.value = Math.min(Math.max(detectedK, 2), 64);
         }
         
         const runLengths = {};
