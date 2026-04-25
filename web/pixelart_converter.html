@@ -728,11 +728,18 @@
       <article class="card">
         <div class="card-head" style="display: flex; align-items: center; gap: 8px; justify-content: space-between;">
           <span>Paleta final</span>
-          <button id="undoBtn" class="icon-btn" style="opacity:0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" type="button" disabled title="Desfazer (Ctrl+Z)">
-            <svg width="14" height="14" viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
-              <path fill="currentColor" d="M4 2v2H2v2H0v2h2v2h2v2h2v-2H4V8h8V4H6V2H4z"/>
-            </svg>
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <button id="sortPaletteBtn" class="icon-btn" style="opacity:0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" type="button" title="Ordenar Cores (Por Frequência / Proximidade)">
+              <svg width="14" height="14" viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+                <path fill="currentColor" d="M2 2h10v2H2V2zm0 4h8v2H2V6zm0 4h6v2H2v-2z"/>
+              </svg>
+            </button>
+            <button id="undoBtn" class="icon-btn" style="opacity:0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" type="button" disabled title="Desfazer (Ctrl+Z)">
+              <svg width="14" height="14" viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+                <path fill="currentColor" d="M4 2v2H2v2H0v2h2v2h2v2h2v-2H4V8h8V4H6V2H4z"/>
+              </svg>
+            </button>
+          </div>
         </div>
         <div id="palette" class="palette"></div>
         <div class="palette-actions">
@@ -758,6 +765,7 @@
       const downloadBtn = document.getElementById('downloadBtn');
       const statusEl = document.getElementById('status');
       const paletteEl = document.getElementById('palette');
+      const sortPaletteBtn = document.getElementById('sortPaletteBtn');
 
       const undoBtn = document.getElementById('undoBtn');
       const gridToggleBtn = document.getElementById('gridToggleBtn');
@@ -1029,8 +1037,26 @@
 
 
 
+      let sortMode = 'proximity'; // 'proximity' or 'frequency'
+
       function sortPaletteColors(colors) {
         if (!colors || colors.length <= 1) return colors;
+        
+        if (sortMode === 'frequency' && state.workingData) {
+           const colorCounts = {};
+           for (let i = 0; i < state.workingData.length; i += 4) {
+              if (state.workingData[i+3] < 12) continue;
+              const hex = rgbToHex(state.workingData[i], state.workingData[i+1], state.workingData[i+2]);
+              colorCounts[hex] = (colorCounts[hex] || 0) + 1;
+           }
+           const sorted = [...colors].sort((a, b) => {
+              const hexA = rgbToHex(a[0], a[1], a[2]);
+              const hexB = rgbToHex(b[0], b[1], b[2]);
+              return (colorCounts[hexB] || 0) - (colorCounts[hexA] || 0);
+           });
+           return sorted;
+        }
+
         const sorted = [];
         const pool = [...colors];
         
@@ -2048,6 +2074,15 @@
       convertBtn.addEventListener('click', convertImage);
       downloadBtn.addEventListener('click', downloadResult);
       undoBtn.addEventListener('click', undoLastAction);
+      
+      sortPaletteBtn.addEventListener('click', () => {
+         sortMode = (sortMode === 'proximity') ? 'frequency' : 'proximity';
+         setStatus(`Ordenando paleta por: ${sortMode === 'proximity' ? 'Proximidade de Cores' : 'Quantidade de Pixels'}`, 'ok');
+         if (state.palette && state.palette.length > 0) {
+            state.palette = sortPaletteColors(state.palette);
+            updatePaletteUI(state.palette);
+         }
+      });
 
       gridToggleBtn.addEventListener('click', () => {
         state.showGrid = !state.showGrid;
