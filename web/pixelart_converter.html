@@ -424,7 +424,14 @@
       outline: 2px solid #4575a9;
       image-rendering: pixelated;
       image-rendering: crisp-edges;
-      background: #0d1a2b;
+      background:
+        linear-gradient(45deg, #cccccc 25%, transparent 25%),
+        linear-gradient(-45deg, #cccccc 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #cccccc 75%),
+        linear-gradient(-45deg, transparent 75%, #cccccc 75%),
+        #ffffff;
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
       display: block;
       transform-origin: center center;
       pointer-events: none;
@@ -1407,7 +1414,7 @@
           const scale = getCleanInt(previewScaleInput, 1, 24, 8);
           const realPixelSize = scale * bounds.ratio;
           
-          if (realPixelSize >= 2) {
+          if (realPixelSize >= 0.5) {
             outCtx.beginPath();
             outCtx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
             outCtx.lineWidth = 1;
@@ -1429,7 +1436,10 @@
 
       function updatePaletteUI(palette) {
         paletteEl.innerHTML = '';
-        if (!palette || palette.length === 0) return;
+        if (!palette) return;
+        
+        numColorsInput.value = palette.length;
+        if (palette.length === 0) return;
 
         palette.forEach(([r, g, b]) => {
           const item = document.createElement('div');
@@ -1498,21 +1508,22 @@
              }
           });
           item.addEventListener('click', (e) => {
+            document.body.appendChild(input);
             input.style.display = 'block';
             input.style.position = 'fixed';
             input.style.left = e.clientX + 'px';
             input.style.top = e.clientY + 'px';
-            input.style.width = '0';
-            input.style.height = '0';
+            input.style.width = '1px';
+            input.style.height = '1px';
             input.style.padding = '0';
             input.style.border = 'none';
-            input.style.opacity = '0';
+            input.style.opacity = '0.01';
+            input.style.zIndex = '999999';
             input.click();
           });
 
           item.appendChild(label);
           item.appendChild(eraseBtn);
-          item.appendChild(input);
           paletteEl.appendChild(item);
         });
       }
