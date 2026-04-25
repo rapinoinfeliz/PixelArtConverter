@@ -573,10 +573,12 @@
       </div>
 
       <div class="row">
-        <div class="field" style="position: relative;">
+        <div class="field">
           <label for="targetWidth">Largura final (px)</label>
-          <button id="autoDetectScaleBtn" class="btn-soft" style="position: absolute; top: -3px; right: 0; padding: 2px 6px; font-size: 10px; min-width: 0; width: auto;" type="button" disabled title="Detectar o tamanho ideal do pixel">🪄 Auto</button>
-          <input id="targetWidth" type="number" min="1" max="512" step="1" value="64" />
+          <div style="position: relative; display: flex; align-items: center;">
+            <input id="targetWidth" type="number" min="1" max="512" step="1" value="64" style="padding-right: 28px;" />
+            <button id="autoDetectScaleBtn" style="position: absolute; right: 6px; background: none; border: none; font-size: 16px; cursor: pointer; padding: 0; opacity: 0.6; pointer-events: auto; outline: none; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" type="button" disabled title="Auto-detectar tamanho original">🪄</button>
+          </div>
         </div>
         <div class="field">
           <label for="targetHeight">Altura final (px)</label>
