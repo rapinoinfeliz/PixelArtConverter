@@ -427,6 +427,34 @@
       overflow: auto;
     }
 
+    .palette-actions {
+      display: flex;
+      gap: 10px;
+      padding: 0 8px 8px 8px;
+    }
+
+    .erase-color {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 14px;
+      height: 14px;
+      background: #ff4747;
+      color: white;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .swatch:hover .erase-color {
+      opacity: 1;
+    }
+
     .swatch {
       height: 28px;
       border: 2px solid #0c1d32;
@@ -624,6 +652,9 @@
       <article class="card">
         <div class="card-head">Paleta final</div>
         <div id="palette" class="palette"></div>
+        <div class="palette-actions">
+          <button id="savePaletteBtn" class="btn-soft" type="button" disabled>💾 Salvar Paleta Atual</button>
+        </div>
       </article>
     </section>
   </main>
@@ -644,6 +675,7 @@
       const downloadBtn = document.getElementById('downloadBtn');
       const statusEl = document.getElementById('status');
       const paletteEl = document.getElementById('palette');
+      const savePaletteBtn = document.getElementById('savePaletteBtn');
       const dropZone = document.getElementById('dropZone');
       const inputWrap = document.getElementById('inputWrap');
       const outputWrap = document.getElementById('outputWrap');
@@ -693,6 +725,25 @@
           colors: ['#000000', '#0000aa', '#00aa00', '#00aaaa', '#aa0000', '#aa00aa', '#aa5500', '#aaaaaa', '#555555', '#5555ff', '#55ff55', '#55ffff', '#ff5555', '#ff55ff', '#ffff55', '#ffffff', '#000055', '#005500', '#005555', '#550000', '#550055', '#553300', '#555500', '#003355', '#335500', '#553355', '#335555', '#772200', '#227700', '#774477', '#447777', '#777744']
         }
       };
+
+      function loadCustomPalettes() {
+        try {
+          const saved = localStorage.getItem('pixelart_custom_palettes');
+          if (saved) {
+            const customPalettes = JSON.parse(saved);
+            for (const key in customPalettes) {
+              PRESET_PALETTES[key] = customPalettes[key];
+              const opt = document.createElement('option');
+              opt.value = key;
+              opt.textContent = `Salva: ${customPalettes[key].label}`;
+              palettePresetInput.appendChild(opt);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to load palettes from localStorage", e);
+        }
+      }
+      loadCustomPalettes();
 
       function clamp(value, min, max) {
         return Math.min(max, Math.max(min, value));
@@ -848,6 +899,7 @@
         state.scaledCanvas = null;
         state.palette = [];
         downloadBtn.disabled = true;
+        savePaletteBtn.disabled = true;
       }
 
       function drawImageFit(canvas, source, smooth) {
@@ -1125,6 +1177,28 @@
         }
       }
 
+      function makeTransparent(hex) {
+        if (!state.lowResCanvas || !state.palette) return;
+        const rgb = hexToRgb(hex);
+        const ctx = state.lowResCanvas.getContext('2d');
+        const imgData = ctx.getImageData(0, 0, state.lowResCanvas.width, state.lowResCanvas.height);
+        const data = imgData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i+3] < 12) continue;
+          if (data[i] === rgb[0] && data[i+1] === rgb[1] && data[i+2] === rgb[2]) {
+            data[i+3] = 0; // Alpha 0
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+
+        const scaledCtx = state.scaledCanvas.getContext('2d');
+        scaledCtx.clearRect(0, 0, state.scaledCanvas.width, state.scaledCanvas.height);
+        scaledCtx.imageSmoothingEnabled = false;
+        scaledCtx.drawImage(state.lowResCanvas, 0, 0, state.scaledCanvas.width, state.scaledCanvas.height);
+        drawImageFit(outputCanvas, state.scaledCanvas, false);
+      }
+
       function updatePaletteUI(palette) {
         paletteEl.innerHTML = '';
         if (!palette || palette.length === 0) return;
@@ -1139,6 +1213,18 @@
           const label = document.createElement('code');
           label.textContent = hex;
           
+          const eraseBtn = document.createElement('div');
+          eraseBtn.className = 'erase-color';
+          eraseBtn.textContent = '🚫';
+          eraseBtn.title = "Tornar Transparente";
+          eraseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            makeTransparent(item.dataset.color);
+            item.style.opacity = '0.3';
+            item.style.pointerEvents = 'none';
+          });
+          
           const input = document.createElement('input');
           input.type = 'color';
           input.value = hex;
@@ -1151,6 +1237,7 @@
           });
 
           item.appendChild(label);
+          item.appendChild(eraseBtn);
           item.appendChild(input);
           paletteEl.appendChild(item);
         });
@@ -1318,6 +1405,7 @@
 
           convertBtn.disabled = false;
           downloadBtn.disabled = false;
+          savePaletteBtn.disabled = false;
           setStatus(
             `Pronto: ${targetW}x${targetH}px, ${palette.length} cores, paleta ${paletteSelection.label}, escala ${previewScale}x.`,
             'ok'
@@ -1421,6 +1509,37 @@
 
       convertBtn.addEventListener('click', convertImage);
       downloadBtn.addEventListener('click', downloadResult);
+
+      savePaletteBtn.addEventListener('click', () => {
+        if (!state.palette || state.palette.length === 0) return;
+        const name = prompt('Digite um nome para salvar esta paleta:');
+        if (!name || name.trim() === '') return;
+        
+        const key = 'custom_' + Date.now();
+        const customPalette = {
+          label: name.trim(),
+          colors: state.palette.map(([r,g,b]) => rgbToHex(r,g,b))
+        };
+        
+        let customPalettes = {};
+        try {
+          const saved = localStorage.getItem('pixelart_custom_palettes');
+          if (saved) customPalettes = JSON.parse(saved);
+        } catch(e) {}
+        
+        customPalettes[key] = customPalette;
+        localStorage.setItem('pixelart_custom_palettes', JSON.stringify(customPalettes));
+        
+        PRESET_PALETTES[key] = customPalette;
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = `Salva: ${customPalette.label}`;
+        palettePresetInput.appendChild(opt);
+        palettePresetInput.value = key;
+        syncPaletteMode();
+        
+        setStatus(`Paleta "${customPalette.label}" salva com sucesso!`, 'ok');
+      });
 
       // Atalhos de teclado
       document.addEventListener('keydown', (event) => {
