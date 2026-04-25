@@ -441,7 +441,7 @@
       height: 14px;
       background: #ff4747;
       color: white;
-      font-size: 10px;
+      font-size: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -452,6 +452,13 @@
     }
 
     .swatch:hover .erase-color {
+      opacity: 1;
+    }
+
+    .swatch.hidden-color {
+      opacity: 0.4;
+    }
+    .swatch.hidden-color .erase-color {
       opacity: 1;
     }
 
@@ -584,6 +591,7 @@
         <label for="palettePreset">Paleta predefinida</label>
         <select id="palettePreset">
           <option value="auto">Auto (k-means)</option>
+          <option value="detect">Detectar Cores Originais</option>
           <option value="gameboy">Game Boy (4)</option>
           <option value="pico8">PICO-8 (16)</option>
           <option value="dawnbringer16">DawnBringer16 (16)</option>
@@ -936,8 +944,31 @@
         iterationsInput.disabled = !useAuto;
       }
 
+      function extractOriginalPalette(data) {
+        const uniqueColors = new Set();
+        const colors = [];
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i+3] < 12) continue;
+          const r = data[i];
+          const g = data[i+1];
+          const b = data[i+2];
+          const key = (r << 16) | (g << 8) | b;
+          if (!uniqueColors.has(key)) {
+            uniqueColors.add(key);
+            colors.push([r, g, b]);
+            if (colors.length >= 128) break;
+          }
+        }
+        if (colors.length === 0) return [[0,0,0]];
+        return colors;
+      }
+
       function getWorkingPalette(imageData, numColors, iterations) {
         const presetKey = palettePresetInput.value;
+        if (presetKey === 'detect') {
+          const colors = extractOriginalPalette(imageData.data);
+          return { label: `Detectada (${colors.length})`, colors };
+        }
         if (presetKey === 'auto') {
           const colors = buildPaletteKmeans(imageData.data, numColors, iterations);
           return { label: `Auto (${colors.length})`, colors };
@@ -1177,19 +1208,73 @@
         }
       }
 
-      function makeTransparent(hex) {
-        if (!state.lowResCanvas || !state.palette) return;
-        const rgb = hexToRgb(hex);
-        const ctx = state.lowResCanvas.getContext('2d');
-        const imgData = ctx.getImageData(0, 0, state.lowResCanvas.width, state.lowResCanvas.height);
-        const data = imgData.data;
+      function replaceColor(oldHex, newHex) {
+        if (!state.lowResCanvas || !state.palette || !state.workingData) return;
 
+        const oldRgb = hexToRgb(oldHex);
+        const newRgb = hexToRgb(newHex);
+
+        const data = state.workingData;
         for (let i = 0; i < data.length; i += 4) {
           if (data[i+3] < 12) continue;
-          if (data[i] === rgb[0] && data[i+1] === rgb[1] && data[i+2] === rgb[2]) {
-            data[i+3] = 0; // Alpha 0
+          if (data[i] === oldRgb[0] && data[i+1] === oldRgb[1] && data[i+2] === oldRgb[2]) {
+            data[i] = newRgb[0];
+            data[i+1] = newRgb[1];
+            data[i+2] = newRgb[2];
           }
         }
+
+        renderWorkingData();
+
+        for (let i = 0; i < state.palette.length; i++) {
+          const p = state.palette[i];
+          if (p[0] === oldRgb[0] && p[1] === oldRgb[1] && p[2] === oldRgb[2]) {
+            state.palette[i] = newRgb;
+          }
+        }
+        
+        if (state.hiddenColors && state.hiddenColors.has(oldHex)) {
+          state.hiddenColors.delete(oldHex);
+          state.hiddenColors.add(newHex);
+        }
+      }
+
+      function toggleTransparent(hex, swatchEl) {
+        if (!state.lowResCanvas || !state.workingData) return;
+        if (!state.hiddenColors) state.hiddenColors = new Set();
+        
+        const isHidden = state.hiddenColors.has(hex);
+        if (isHidden) {
+          state.hiddenColors.delete(hex);
+          swatchEl.classList.remove('hidden-color');
+        } else {
+          state.hiddenColors.add(hex);
+          swatchEl.classList.add('hidden-color');
+        }
+        
+        renderWorkingData();
+      }
+
+      function renderWorkingData() {
+        const w = state.lowResCanvas.width;
+        const h = state.lowResCanvas.height;
+        const ctx = state.lowResCanvas.getContext('2d');
+        const imgData = new ImageData(new Uint8ClampedArray(state.workingData), w, h);
+        const data = imgData.data;
+        
+        if (state.hiddenColors && state.hiddenColors.size > 0) {
+          const hiddenRgbs = Array.from(state.hiddenColors).map(hexToRgb);
+          for (let i = 0; i < data.length; i += 4) {
+            if (data[i+3] < 12) continue;
+            for (const hr of hiddenRgbs) {
+              if (data[i] === hr[0] && data[i+1] === hr[1] && data[i+2] === hr[2]) {
+                data[i+3] = 0;
+                break;
+              }
+            }
+          }
+        }
+        
         ctx.putImageData(imgData, 0, 0);
 
         const scaledCtx = state.scaledCanvas.getContext('2d');
@@ -1209,20 +1294,34 @@
           const hex = rgbToHex(r, g, b);
           item.style.background = hex;
           item.dataset.color = hex;
+          
+          if (state.hiddenColors && state.hiddenColors.has(hex)) {
+            item.classList.add('hidden-color');
+          }
 
           const label = document.createElement('code');
           label.textContent = hex;
           
           const eraseBtn = document.createElement('div');
           eraseBtn.className = 'erase-color';
-          eraseBtn.textContent = '🚫';
-          eraseBtn.title = "Tornar Transparente";
+          eraseBtn.title = "Alternar Transparência";
+          
+          const updateEraseIcon = () => {
+             if (item.classList.contains('hidden-color')) {
+                 eraseBtn.textContent = '👁️';
+                 eraseBtn.style.background = '#47ff4a';
+             } else {
+                 eraseBtn.textContent = '🚫';
+                 eraseBtn.style.background = '#ff4747';
+             }
+          };
+          updateEraseIcon();
+          
           eraseBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             e.preventDefault();
-            makeTransparent(item.dataset.color);
-            item.style.opacity = '0.3';
-            item.style.pointerEvents = 'none';
+            toggleTransparent(item.dataset.color, item);
+            updateEraseIcon();
           });
           
           const input = document.createElement('input');
@@ -1380,6 +1479,9 @@
           } else {
             quantizeWithoutDither(imageData, palette);
           }
+          
+          state.workingData = new Uint8ClampedArray(imageData.data);
+          state.hiddenColors = new Set();
 
           lowCtx.putImageData(imageData, 0, 0);
 
