@@ -583,12 +583,12 @@
         </div>
       </div>
 
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
         <label class="check" for="lockAspect" style="margin-bottom: 0;">
           <input id="lockAspect" type="checkbox" checked />
           Manter proporcao original
         </label>
-        <button id="autoDetectScaleBtn" style="background: none; border: none; font-size: 11px; cursor: pointer; padding: 2px 4px; opacity: 0.6; text-decoration: underline; color: var(--text); outline: none; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" type="button" disabled title="Auto-detectar tamanho original">🪄 Auto</button>
+        <button id="autoDetectScaleBtn" style="background: none; border: none; font-size: 14px; cursor: pointer; padding: 0; opacity: 0.6; outline: none; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" type="button" disabled title="Auto-detectar tamanho original">🪄</button>
       </div>
 
       <div class="field">
@@ -654,9 +654,9 @@
         </article>
 
         <article class="card">
-          <div class="card-head" style="display: flex; justify-content: space-between; align-items: center;">
+          <div class="card-head" style="display: flex; align-items: center; gap: 8px;">
             <span>Saida Pixel Art</span>
-            <button id="gridToggleBtn" style="background: none; border: none; font-size: 11px; cursor: pointer; padding: 0; opacity: 0.5; color: var(--text); text-decoration: underline;" title="Ligar/Desligar Grid"># Grid</button>
+            <button id="gridToggleBtn" style="background: none; border: none; font-size: 14px; cursor: pointer; padding: 0; opacity: 0.5; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'" title="Ligar/Desligar Grid">🕸️</button>
           </div>
           <div class="canvas-wrap" id="outputWrap">
             <canvas id="outputCanvas" width="320" height="320" hidden></canvas>
@@ -665,7 +665,7 @@
       </div>
 
       <article class="card">
-        <div class="card-head" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="card-head" style="display: flex; align-items: center; gap: 8px;">
           <span>Paleta final</span>
           <button id="undoBtn" style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:14px; padding:0; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" type="button" disabled title="Desfazer (Ctrl+Z)">↩️</button>
         </div>
@@ -1672,7 +1672,18 @@
 
           const imageData = lowCtx.getImageData(0, 0, targetW, targetH);
           const paletteSelection = getWorkingPalette(imageData, numColors, iterations);
-          const palette = paletteSelection.colors;
+          let palette = paletteSelection.colors;
+          
+          const uniquePalette = [];
+          const seen = new Set();
+          for (let i = 0; i < palette.length; i++) {
+            const hex = rgbToHex(palette[i][0], palette[i][1], palette[i][2]);
+            if (!seen.has(hex)) {
+              seen.add(hex);
+              uniquePalette.push(palette[i]);
+            }
+          }
+          palette = uniquePalette;
 
           if (useDither) {
             applyFloydSteinbergDither(imageData, palette);
