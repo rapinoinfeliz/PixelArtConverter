@@ -575,10 +575,7 @@
       <div class="row">
         <div class="field">
           <label for="targetWidth">Largura final (px)</label>
-          <div style="position: relative; display: flex; align-items: center;">
-            <input id="targetWidth" type="number" min="1" max="512" step="1" value="64" style="padding-right: 28px;" />
-            <button id="autoDetectScaleBtn" style="position: absolute; right: 6px; background: none; border: none; font-size: 16px; cursor: pointer; padding: 0; opacity: 0.6; pointer-events: auto; outline: none; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" type="button" disabled title="Auto-detectar tamanho original">🪄</button>
-          </div>
+          <input id="targetWidth" type="number" min="1" max="512" step="1" value="64" />
         </div>
         <div class="field">
           <label for="targetHeight">Altura final (px)</label>
@@ -586,10 +583,13 @@
         </div>
       </div>
 
-      <label class="check" for="lockAspect">
-        <input id="lockAspect" type="checkbox" checked />
-        Manter proporcao original
-      </label>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <label class="check" for="lockAspect" style="margin-bottom: 0;">
+          <input id="lockAspect" type="checkbox" checked />
+          Manter proporcao original
+        </label>
+        <button id="autoDetectScaleBtn" style="background: none; border: none; font-size: 11px; cursor: pointer; padding: 2px 4px; opacity: 0.6; text-decoration: underline; color: var(--text); outline: none; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" type="button" disabled title="Auto-detectar tamanho original">🪄 Auto</button>
+      </div>
 
       <div class="field">
         <label for="palettePreset">Paleta predefinida</label>
@@ -654,7 +654,10 @@
         </article>
 
         <article class="card">
-          <div class="card-head">Saida Pixel Art</div>
+          <div class="card-head" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Saida Pixel Art</span>
+            <button id="gridToggleBtn" style="background: none; border: none; font-size: 11px; cursor: pointer; padding: 0; opacity: 0.5; color: var(--text); text-decoration: underline;" title="Ligar/Desligar Grid"># Grid</button>
+          </div>
           <div class="canvas-wrap" id="outputWrap">
             <canvas id="outputCanvas" width="320" height="320" hidden></canvas>
           </div>
@@ -664,7 +667,7 @@
       <article class="card">
         <div class="card-head" style="display: flex; justify-content: space-between; align-items: center;">
           <span>Paleta final</span>
-          <button id="undoBtn" class="btn-soft" style="padding: 2px 8px; font-size: 12px; height: 24px;" type="button" disabled title="Desfazer última mescla (Ctrl+Z)">↩️ Desfazer</button>
+          <button id="undoBtn" style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:14px; padding:0; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" type="button" disabled title="Desfazer (Ctrl+Z)">↩️</button>
         </div>
         <div id="palette" class="palette"></div>
         <div class="palette-actions">
@@ -693,6 +696,7 @@
       const savePaletteBtn = document.getElementById('savePaletteBtn');
       const undoBtn = document.getElementById('undoBtn');
       const autoDetectScaleBtn = document.getElementById('autoDetectScaleBtn');
+      const gridToggleBtn = document.getElementById('gridToggleBtn');
       const dropZone = document.getElementById('dropZone');
       const inputWrap = document.getElementById('inputWrap');
       const outputWrap = document.getElementById('outputWrap');
@@ -708,6 +712,7 @@
         workingData: null,
         hiddenColors: null,
         history: [],
+        showGrid: false,
         viewerZoom: 1,
         viewerZoomTarget: 1,
         viewerZoomAnimFrame: null,
@@ -1370,6 +1375,20 @@
         scaledCtx.clearRect(0, 0, state.scaledCanvas.width, state.scaledCanvas.height);
         scaledCtx.imageSmoothingEnabled = false;
         scaledCtx.drawImage(state.lowResCanvas, 0, 0, state.scaledCanvas.width, state.scaledCanvas.height);
+        
+        if (state.showGrid) {
+          const scale = getCleanInt(previewScaleInput, 1, 24, 8);
+          if (scale >= 2) {
+            scaledCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            for (let x = 0; x <= state.scaledCanvas.width; x += scale) {
+              scaledCtx.fillRect(x, 0, 1, state.scaledCanvas.height);
+            }
+            for (let y = 0; y <= state.scaledCanvas.height; y += scale) {
+              scaledCtx.fillRect(0, y, state.scaledCanvas.width, 1);
+            }
+          }
+        }
+        
         drawImageFit(outputCanvas, state.scaledCanvas, false);
       }
 
@@ -1443,7 +1462,15 @@
                  mergeColors(sourceHex, item.dataset.color);
              }
           });
-          item.addEventListener('click', () => input.click());
+          item.addEventListener('click', (e) => {
+            input.style.display = 'block';
+            input.style.position = 'fixed';
+            input.style.left = e.clientX + 'px';
+            input.style.top = e.clientY + 'px';
+            input.style.opacity = '0';
+            input.click();
+            setTimeout(() => input.style.display = 'none', 100);
+          });
 
           item.appendChild(label);
           item.appendChild(eraseBtn);
@@ -1735,13 +1762,13 @@
         
         if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return;
         
-        const scaleX = state.lowResCanvas.width / rect.width;
-        const scaleY = state.lowResCanvas.height / rect.height;
+        const scaleX = outputCanvas.width / rect.width;
+        const scaleY = outputCanvas.height / rect.height;
         
         const x = Math.floor((clientX - rect.left) * scaleX);
         const y = Math.floor((clientY - rect.top) * scaleY);
         
-        const ctx = state.lowResCanvas.getContext('2d');
+        const ctx = outputCanvas.getContext('2d', { willReadFrequently: true });
         const data = ctx.getImageData(x, y, 1, 1).data;
         
         if (data[3] < 12) return;
@@ -1789,6 +1816,12 @@
       autoDetectScaleBtn.addEventListener('click', detectOptimalSize);
       undoBtn.addEventListener('click', undoLastAction);
       autoDetectScaleBtn.addEventListener('click', detectOptimalSize);
+
+      gridToggleBtn.addEventListener('click', () => {
+        state.showGrid = !state.showGrid;
+        gridToggleBtn.style.opacity = state.showGrid ? '1' : '0.5';
+        if (state.lowResCanvas) renderWorkingData();
+      });
 
       savePaletteBtn.addEventListener('click', () => {
         if (!state.palette || state.palette.length === 0) return;
