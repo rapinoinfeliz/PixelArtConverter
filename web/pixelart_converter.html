@@ -483,12 +483,13 @@
     }
 
     .swatch input[type="color"] {
-      position: absolute;
-      opacity: 0;
-      inset: -10px;
-      width: 200%;
-      height: 200%;
-      cursor: pointer;
+      display: none;
+    }
+
+    .swatch.drag-over {
+      outline: 2px dashed var(--accent);
+      transform: scale(1.05);
+      z-index: 5;
     }
 
     .swatch code {
@@ -1180,41 +1181,53 @@
         }
       }
 
-      function replaceColor(oldHex, newHex) {
-        if (!state.lowResCanvas || !state.palette) return;
-
-        const oldRgb = hexToRgb(oldHex);
-        const newRgb = hexToRgb(newHex);
-
-        const ctx = state.lowResCanvas.getContext('2d');
-        const imgData = ctx.getImageData(0, 0, state.lowResCanvas.width, state.lowResCanvas.height);
-        const data = imgData.data;
-
+      function mergeColors(sourceHex, targetHex) {
+        if (!state.lowResCanvas || !state.palette || !state.workingData) return;
+        
+        const srcRgb = hexToRgb(sourceHex);
+        const tgtRgb = hexToRgb(targetHex);
+        
+        const newRgb = [
+          Math.round((srcRgb[0] + tgtRgb[0]) / 2),
+          Math.round((srcRgb[1] + tgtRgb[1]) / 2),
+          Math.round((srcRgb[2] + tgtRgb[2]) / 2)
+        ];
+        const newHex = rgbToHex(newRgb[0], newRgb[1], newRgb[2]);
+        
+        const data = state.workingData;
         for (let i = 0; i < data.length; i += 4) {
           if (data[i+3] < 12) continue;
-          if (data[i] === oldRgb[0] && data[i+1] === oldRgb[1] && data[i+2] === oldRgb[2]) {
+          const isSrc = data[i] === srcRgb[0] && data[i+1] === srcRgb[1] && data[i+2] === srcRgb[2];
+          const isTgt = data[i] === tgtRgb[0] && data[i+1] === tgtRgb[1] && data[i+2] === tgtRgb[2];
+          
+          if (isSrc || isTgt) {
             data[i] = newRgb[0];
             data[i+1] = newRgb[1];
             data[i+2] = newRgb[2];
           }
         }
-        ctx.putImageData(imgData, 0, 0);
-
-        // Update scaled canvas
-        const scale = getCleanInt(previewScaleInput, 1, 24, 8);
-        const scaledCtx = state.scaledCanvas.getContext('2d');
-        scaledCtx.imageSmoothingEnabled = false;
-        scaledCtx.clearRect(0, 0, state.scaledCanvas.width, state.scaledCanvas.height);
-        scaledCtx.drawImage(state.lowResCanvas, 0, 0, state.scaledCanvas.width, state.scaledCanvas.height);
-        drawImageFit(outputCanvas, state.scaledCanvas, false);
-
-        // Update palette state
+        
+        renderWorkingData();
+        
+        state.palette = state.palette.filter(p => p[0] !== srcRgb[0] || p[1] !== srcRgb[1] || p[2] !== srcRgb[2]);
+        
         for (let i = 0; i < state.palette.length; i++) {
           const p = state.palette[i];
-          if (p[0] === oldRgb[0] && p[1] === oldRgb[1] && p[2] === oldRgb[2]) {
+          if (p[0] === tgtRgb[0] && p[1] === tgtRgb[1] && p[2] === tgtRgb[2]) {
             state.palette[i] = newRgb;
+            break;
           }
         }
+        
+        if (state.hiddenColors) {
+          if (state.hiddenColors.has(sourceHex) || state.hiddenColors.has(targetHex)) {
+            state.hiddenColors.delete(sourceHex);
+            state.hiddenColors.delete(targetHex);
+            state.hiddenColors.add(newHex);
+          }
+        }
+        
+        updatePaletteUI(state.palette);
       }
 
       function replaceColor(oldHex, newHex) {
@@ -1343,6 +1356,27 @@
             replaceColor(item.dataset.color, newHex);
             item.dataset.color = newHex;
           });
+
+          item.draggable = true;
+          item.addEventListener('dragstart', (e) => {
+             e.dataTransfer.setData('text/plain', item.dataset.color);
+             e.dataTransfer.effectAllowed = 'copyMove';
+          });
+          item.addEventListener('dragover', (e) => {
+             e.preventDefault();
+             e.dataTransfer.dropEffect = 'copy';
+             item.classList.add('drag-over');
+          });
+          item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+          item.addEventListener('drop', (e) => {
+             e.preventDefault();
+             item.classList.remove('drag-over');
+             const sourceHex = e.dataTransfer.getData('text/plain');
+             if (sourceHex && sourceHex !== item.dataset.color) {
+                 mergeColors(sourceHex, item.dataset.color);
+             }
+          });
+          item.addEventListener('click', () => input.click());
 
           item.appendChild(label);
           item.appendChild(eraseBtn);
