@@ -642,7 +642,6 @@
         <label for="palettePreset">Paleta predefinida</label>
         <select id="palettePreset">
           <option value="auto">Auto (k-means)</option>
-          <option value="detect">Detectar Cores Originais</option>
           <option value="gameboy">Game Boy (4)</option>
           <option value="pico8">PICO-8 (16)</option>
           <option value="dawnbringer16">DawnBringer16 (16)</option>
@@ -1017,24 +1016,7 @@
         iterationsInput.disabled = !useAuto;
       }
 
-      function extractOriginalPalette(data) {
-        const uniqueColors = new Set();
-        const colors = [];
-        for (let i = 0; i < data.length; i += 4) {
-          if (data[i+3] < 12) continue;
-          const r = data[i];
-          const g = data[i+1];
-          const b = data[i+2];
-          const key = (r << 16) | (g << 8) | b;
-          if (!uniqueColors.has(key)) {
-            uniqueColors.add(key);
-            colors.push([r, g, b]);
-            if (colors.length >= 128) break;
-          }
-        }
-        if (colors.length === 0) return [[0,0,0]];
-        return colors;
-      }
+
 
       function sortPaletteColors(colors) {
         if (!colors || colors.length <= 1) return colors;
@@ -1069,10 +1051,7 @@
         const presetKey = palettePresetInput.value;
         let finalColors = [];
         let label = '';
-        if (presetKey === 'detect') {
-          finalColors = extractOriginalPalette(imageData.data);
-          label = `Detectada (${finalColors.length})`;
-        } else if (presetKey === 'auto') {
+        if (presetKey === 'auto') {
           finalColors = buildPaletteKmeans(imageData.data, numColors, iterations);
           label = `Auto (${finalColors.length})`;
         } else {
@@ -1568,6 +1547,21 @@
             
             ccpApply.addEventListener('click', () => {
                globalPicker.style.display = 'none';
+               
+               const unique = {};
+               const newPalette = [];
+               for(let i=0; i<state.palette.length; i++) {
+                 const hex = rgbToHex(state.palette[i][0], state.palette[i][1], state.palette[i][2]);
+                 if (!unique[hex]) {
+                    unique[hex] = true;
+                    newPalette.push(state.palette[i]);
+                 }
+               }
+               
+               if (newPalette.length < state.palette.length) {
+                 state.palette = newPalette;
+                 updatePaletteUI(state.palette);
+               }
             });
         }
 
