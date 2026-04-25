@@ -573,7 +573,7 @@
 
       <div class="row">
         <div class="field">
-          <label for="targetWidth">Largura final (px)</label>
+          <label for="targetWidth">Largura final (px) <button id="autoDetectScaleBtn" class="btn-soft" style="padding: 2px 5px; font-size: 12px; margin-left: 10px; display: inline-block; width: auto;" type="button" disabled>🪄 Auto</button></label>
           <input id="targetWidth" type="number" min="1" max="512" step="1" value="64" />
         </div>
         <div class="field">
@@ -684,6 +684,7 @@
       const statusEl = document.getElementById('status');
       const paletteEl = document.getElementById('palette');
       const savePaletteBtn = document.getElementById('savePaletteBtn');
+      const autoDetectScaleBtn = document.getElementById('autoDetectScaleBtn');
       const dropZone = document.getElementById('dropZone');
       const inputWrap = document.getElementById('inputWrap');
       const outputWrap = document.getElementById('outputWrap');
@@ -1005,46 +1006,53 @@
       function pickInitialCentroids(samples, k) {
         if (samples.length === 0) return [[0, 0, 0]];
 
+        const colorCounts = new Map();
+        for (let i = 0; i < samples.length; i++) {
+          const [r, g, b] = samples[i];
+          const key = (r << 16) | (g << 8) | b;
+          colorCounts.set(key, (colorCounts.get(key) || 0) + 1);
+        }
+
+        const sortedColors = Array.from(colorCounts.entries())
+          .sort((a, b) => b[1] - a[1])
+          .map(entry => {
+            const key = entry[0];
+            return [(key >> 16) & 255, (key >> 8) & 255, key & 255];
+          });
+
         const centroids = [];
-        centroids.push(samples[Math.floor(Math.random() * samples.length)].slice());
+        centroids.push(sortedColors[0]);
 
-        while (centroids.length < k) {
-          const distances = new Float64Array(samples.length);
-          let total = 0;
+        const minDistance = 1000;
 
-          for (let i = 0; i < samples.length; i += 1) {
-            const [sr, sg, sb] = samples[i];
-            let nearest = Infinity;
-
-            for (let j = 0; j < centroids.length; j += 1) {
-              const [cr, cg, cb] = centroids[j];
-              const dr = sr - cr;
-              const dg = sg - cg;
-              const db = sb - cb;
-              const dist = (dr * dr) + (dg * dg) + (db * db);
-              if (dist < nearest) nearest = dist;
-            }
-
-            distances[i] = nearest;
-            total += nearest;
-          }
-
-          if (total === 0) {
-            centroids.push(samples[Math.floor(Math.random() * samples.length)].slice());
-            continue;
-          }
-
-          let threshold = Math.random() * total;
-          let index = 0;
-          for (let i = 0; i < distances.length; i += 1) {
-            threshold -= distances[i];
-            if (threshold <= 0) {
-              index = i;
+        for (let i = 1; i < sortedColors.length; i++) {
+          if (centroids.length >= k) break;
+          const candidate = sortedColors[i];
+          let isDifferent = true;
+          for (let j = 0; j < centroids.length; j++) {
+            const [cr, cg, cb] = centroids[j];
+            const dr = candidate[0] - cr;
+            const dg = candidate[1] - cg;
+            const db = candidate[2] - cb;
+            if ((dr * dr + dg * dg + db * db) < minDistance) {
+              isDifferent = false;
               break;
             }
           }
+          if (isDifferent) centroids.push(candidate);
+        }
 
-          centroids.push(samples[index].slice());
+        let i = 1;
+        while (centroids.length < k && i < sortedColors.length) {
+           const candidate = sortedColors[i];
+           if (!centroids.some(c => c[0]===candidate[0] && c[1]===candidate[1] && c[2]===candidate[2])) {
+               centroids.push(candidate);
+           }
+           i++;
+        }
+
+        while (centroids.length < k) {
+            centroids.push(samples[Math.floor(Math.random() * samples.length)].slice());
         }
 
         return centroids;
@@ -1372,10 +1380,73 @@
             upload: 'Imagem carregada. Clique em converter.'
           };
           setStatus(messages[source] || 'Imagem carregada.', 'ok');
+          autoDetectScaleBtn.disabled = false;
         };
         img.onerror = () => setStatus('Nao foi possivel ler a imagem.', 'err');
 
         img.src = URL.createObjectURL(file);
+      }
+
+      function detectOptimalSize() {
+        if (!state.image) return;
+        
+        const w = state.image.width;
+        const h = state.image.height;
+        if (w === 0 || h === 0) return;
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(state.image, 0, 0);
+        const data = ctx.getImageData(0, 0, w, h).data;
+        
+        const runLengths = {};
+        
+        const checkRun = (len) => {
+          if (len > 2 && len < w / 2) {
+            runLengths[len] = (runLengths[len] || 0) + 1;
+          }
+        };
+
+        for (let y = 0; y < h; y++) {
+          let currentRun = 1;
+          let idx = y * w * 4;
+          let lastR = data[idx], lastG = data[idx+1], lastB = data[idx+2];
+          
+          for (let x = 1; x < w; x++) {
+            idx += 4;
+            const r = data[idx], g = data[idx+1], b = data[idx+2];
+            const diff = Math.abs(r-lastR) + Math.abs(g-lastG) + Math.abs(b-lastB);
+            
+            if (diff < 15) {
+              currentRun++;
+            } else {
+              checkRun(currentRun);
+              currentRun = 1;
+              lastR = r; lastG = g; lastB = b;
+            }
+          }
+          checkRun(currentRun);
+        }
+        
+        let bestLen = 0;
+        let maxCount = 0;
+        for (const len in runLengths) {
+          if (runLengths[len] > maxCount) {
+            maxCount = runLengths[len];
+            bestLen = parseInt(len, 10);
+          }
+        }
+        
+        if (bestLen > 0) {
+          const targetW = Math.round(w / bestLen);
+          targetWidthInput.value = targetW;
+          updateHeightFromWidth();
+          setStatus(`Escala detectada: bloco de ${bestLen}px. Largura ideal sugerida: ${targetW}px.`, 'ok');
+        } else {
+          setStatus('Não foi possível detectar a escala com precisão.', 'err');
+        }
       }
 
       function handlePaste(event) {
@@ -1611,6 +1682,8 @@
 
       convertBtn.addEventListener('click', convertImage);
       downloadBtn.addEventListener('click', downloadResult);
+      autoDetectScaleBtn.addEventListener('click', detectOptimalSize);
+      autoDetectScaleBtn.addEventListener('click', detectOptimalSize);
 
       savePaletteBtn.addEventListener('click', () => {
         if (!state.palette || state.palette.length === 0) return;
