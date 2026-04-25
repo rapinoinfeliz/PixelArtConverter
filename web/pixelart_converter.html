@@ -940,6 +940,8 @@
         ctx.clearRect(0, 0, canvasW, canvasH);
         ctx.imageSmoothingEnabled = smooth;
         ctx.drawImage(source, x, y, drawW, drawH);
+        
+        return { x, y, w: drawW, h: drawH, ratio };
       }
 
       function rgbToHex(r, g, b) {
@@ -1376,20 +1378,31 @@
         scaledCtx.imageSmoothingEnabled = false;
         scaledCtx.drawImage(state.lowResCanvas, 0, 0, state.scaledCanvas.width, state.scaledCanvas.height);
         
+        const bounds = drawImageFit(outputCanvas, state.scaledCanvas, false);
+        
         if (state.showGrid) {
+          const outCtx = outputCanvas.getContext('2d');
           const scale = getCleanInt(previewScaleInput, 1, 24, 8);
-          if (scale >= 2) {
-            scaledCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            for (let x = 0; x <= state.scaledCanvas.width; x += scale) {
-              scaledCtx.fillRect(x, 0, 1, state.scaledCanvas.height);
+          const realPixelSize = scale * bounds.ratio;
+          
+          if (realPixelSize >= 2) {
+            outCtx.beginPath();
+            outCtx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+            outCtx.lineWidth = 1;
+            
+            for (let c = 0; c <= state.lowResCanvas.width; c++) {
+              const lx = bounds.x + c * realPixelSize;
+              outCtx.moveTo(lx, bounds.y);
+              outCtx.lineTo(lx, bounds.y + bounds.h);
             }
-            for (let y = 0; y <= state.scaledCanvas.height; y += scale) {
-              scaledCtx.fillRect(0, y, state.scaledCanvas.width, 1);
+            for (let r = 0; r <= state.lowResCanvas.height; r++) {
+              const ly = bounds.y + r * realPixelSize;
+              outCtx.moveTo(bounds.x, ly);
+              outCtx.lineTo(bounds.x + bounds.w, ly);
             }
+            outCtx.stroke();
           }
         }
-        
-        drawImageFit(outputCanvas, state.scaledCanvas, false);
       }
 
       function updatePaletteUI(palette) {
