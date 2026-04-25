@@ -555,6 +555,17 @@
       pointer-events: none;
     }
 
+    .swatch .color-count {
+      position: absolute;
+      top: 1px;
+      right: 4px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.95);
+      text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+      font-family: 'VT323', monospace;
+      pointer-events: none;
+    }
+
     @media (max-width: 1024px) {
       body {
         height: auto;
@@ -1565,6 +1576,15 @@
             });
         }
 
+        const colorCounts = {};
+        if (state.workingData) {
+          for (let i = 0; i < state.workingData.length; i += 4) {
+             if (state.workingData[i+3] < 12) continue;
+             const hex = rgbToHex(state.workingData[i], state.workingData[i+1], state.workingData[i+2]);
+             colorCounts[hex] = (colorCounts[hex] || 0) + 1;
+          }
+        }
+
         palette.forEach(([r, g, b]) => {
           const item = document.createElement('div');
           item.className = 'swatch';
@@ -1578,6 +1598,10 @@
 
           const label = document.createElement('code');
           label.textContent = hex;
+          
+          const countLabel = document.createElement('div');
+          countLabel.className = 'color-count';
+          countLabel.textContent = colorCounts[hex] || 0;
           
           const eraseBtn = document.createElement('div');
           eraseBtn.className = 'erase-color';
@@ -1660,6 +1684,7 @@
           });
 
           item.appendChild(label);
+          item.appendChild(countLabel);
           item.appendChild(eraseBtn);
           paletteEl.appendChild(item);
         });
