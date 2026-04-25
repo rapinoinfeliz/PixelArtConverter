@@ -1766,6 +1766,17 @@
         ctx.drawImage(state.image, 0, 0);
         const data = ctx.getImageData(0, 0, w, h).data;
         
+        const uniqueColors = new Set();
+        for (let i = 0; i < data.length; i += 4) {
+           if (data[i+3] >= 12) {
+              uniqueColors.add((data[i] << 16) | (data[i+1] << 8) | data[i+2]);
+              if (uniqueColors.size >= 128) break;
+           }
+        }
+        if (uniqueColors.size > 0 && palettePresetInput.value === 'auto') {
+           numColorsInput.value = Math.min(Math.max(uniqueColors.size, 2), 64);
+        }
+        
         const runLengths = {};
         
         const checkRun = (len) => {
