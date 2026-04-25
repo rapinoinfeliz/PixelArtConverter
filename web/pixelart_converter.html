@@ -1441,6 +1441,22 @@
         numColorsInput.value = palette.length;
         if (palette.length === 0) return;
 
+        let globalPicker = document.getElementById('globalColorPicker');
+        if (!globalPicker) {
+            globalPicker = document.createElement('input');
+            globalPicker.type = 'color';
+            globalPicker.id = 'globalColorPicker';
+            globalPicker.style.display = 'block';
+            globalPicker.style.position = 'fixed';
+            globalPicker.style.width = '1px';
+            globalPicker.style.height = '1px';
+            globalPicker.style.padding = '0';
+            globalPicker.style.border = 'none';
+            globalPicker.style.opacity = '0.01';
+            globalPicker.style.zIndex = '999999';
+            document.body.appendChild(globalPicker);
+        }
+
         palette.forEach(([r, g, b]) => {
           const item = document.createElement('div');
           item.className = 'swatch';
@@ -1477,16 +1493,7 @@
             updateEraseIcon();
           });
           
-          const input = document.createElement('input');
-          input.type = 'color';
-          input.value = hex;
-          input.addEventListener('input', (e) => {
-            const newHex = e.target.value;
-            item.style.background = newHex;
-            label.textContent = newHex;
-            replaceColor(item.dataset.color, newHex);
-            item.dataset.color = newHex;
-          });
+
 
           item.draggable = true;
           item.addEventListener('dragstart', (e) => {
@@ -1508,18 +1515,17 @@
              }
           });
           item.addEventListener('click', (e) => {
-            document.body.appendChild(input);
-            input.style.display = 'block';
-            input.style.position = 'fixed';
-            input.style.left = e.clientX + 'px';
-            input.style.top = e.clientY + 'px';
-            input.style.width = '1px';
-            input.style.height = '1px';
-            input.style.padding = '0';
-            input.style.border = 'none';
-            input.style.opacity = '0.01';
-            input.style.zIndex = '999999';
-            input.click();
+            globalPicker.style.left = e.clientX + 'px';
+            globalPicker.style.top = e.clientY + 'px';
+            globalPicker.value = item.dataset.color;
+            globalPicker.oninput = (ev) => {
+              const newHex = ev.target.value;
+              item.style.background = newHex;
+              label.textContent = newHex;
+              replaceColor(item.dataset.color, newHex);
+              item.dataset.color = newHex;
+            };
+            globalPicker.click();
           });
 
           item.appendChild(label);
