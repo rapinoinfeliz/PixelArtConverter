@@ -33,9 +33,9 @@
 
     body {
       margin: 0;
-      min-height: 100vh;
+      height: 100vh;
       font-family: 'VT323', monospace;
-      font-size: 24px;
+      font-size: 18px;
       color: var(--text);
       background:
         linear-gradient(180deg, var(--sky-c) 0 14%, transparent 14% 100%),
@@ -45,16 +45,18 @@
           transparent 2px 4px
         ),
         linear-gradient(180deg, var(--sky-a), var(--sky-b));
-      padding: 24px;
+      padding: 12px;
+      overflow: hidden;
     }
 
     .shell {
-      max-width: 1320px;
+      max-width: 1500px;
       margin: 0 auto;
       display: grid;
-      grid-template-columns: minmax(310px, 420px) 1fr;
-      gap: 16px;
-      align-items: start;
+      grid-template-columns: minmax(300px, 380px) 1fr;
+      gap: 12px;
+      align-items: stretch;
+      height: calc(100vh - 24px);
     }
 
     .panel {
@@ -63,6 +65,9 @@
       border: 4px solid var(--line-dark);
       outline: 3px solid var(--line-light);
       box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
     .panel::before {
@@ -81,35 +86,54 @@
     }
 
     .controls {
-      padding: 18px;
+      padding: 12px;
+      gap: 8px;
+      overflow: auto;
+    }
+
+    .brand {
+      margin: 0 0 8px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .site-logo {
+      width: 100%;
+      max-width: 180px;
+      max-height: 96px;
+      object-fit: contain;
+      border: 2px solid #0f2239;
+      outline: 1px solid #4f7baa;
+      background: rgba(8, 19, 32, 0.45);
+      image-rendering: pixelated;
     }
 
     .title {
-      margin: 0 0 10px;
+      margin: 0 0 6px;
       font-family: 'Press Start 2P', monospace;
       letter-spacing: 0.9px;
-      font-size: 16px;
+      font-size: 13px;
       line-height: 1.45;
       color: var(--accent);
       text-shadow: 2px 2px 0 var(--accent-shadow);
     }
 
     .subtitle {
-      margin: 0 0 18px;
+      margin: 0 0 10px;
       color: var(--muted);
-      font-size: 28px;
+      font-size: 20px;
       line-height: 1.1;
     }
 
     .field {
-      margin-bottom: 12px;
+      margin-bottom: 6px;
       display: grid;
-      gap: 4px;
+      gap: 3px;
     }
 
     .hint {
       margin: 0;
-      font-size: 22px;
+      font-size: 15px;
       line-height: 1.1;
       color: var(--muted);
       letter-spacing: 0.2px;
@@ -118,19 +142,19 @@
     .hint strong {
       color: var(--accent);
       font-family: 'Press Start 2P', monospace;
-      font-size: 9px;
+      font-size: 8px;
       letter-spacing: 0.2px;
     }
 
     .row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      gap: 6px;
     }
 
     label {
       font-family: 'Press Start 2P', monospace;
-      font-size: 10px;
+      font-size: 8px;
       line-height: 1.4;
       color: #d3e7ff;
       text-transform: uppercase;
@@ -141,15 +165,15 @@
     select,
     button {
       width: 100%;
-      min-height: 44px;
+      min-height: 34px;
       border: 3px solid var(--line-dark);
       outline: 2px solid #4f7baa;
       border-radius: 0;
       background: #162b43;
       color: var(--text);
-      padding: 8px 10px;
+      padding: 4px 8px;
       font-family: 'VT323', monospace;
-      font-size: 28px;
+      font-size: 20px;
       line-height: 1;
     }
 
@@ -180,9 +204,9 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      margin: 4px 0 10px;
+      margin: 2px 0 6px;
       font-family: 'VT323', monospace;
-      font-size: 28px;
+      font-size: 20px;
       line-height: 1;
       color: #dbebff;
       text-transform: none;
@@ -192,7 +216,7 @@
     button {
       cursor: pointer;
       font-family: 'Press Start 2P', monospace;
-      font-size: 11px;
+      font-size: 9px;
       letter-spacing: 0.45px;
       text-transform: uppercase;
       box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
@@ -225,21 +249,21 @@
 
     .actions {
       display: grid;
-      gap: 8px;
-      margin-top: 12px;
+      gap: 6px;
+      margin-top: 4px;
     }
 
     .status {
-      margin-top: 10px;
-      padding: 10px;
+      margin-top: 6px;
+      padding: 6px;
       border: 3px solid #0d1f36;
       outline: 2px solid #4c739e;
       background: rgba(18, 43, 70, 0.78);
       font-family: 'VT323', monospace;
-      font-size: 26px;
+      font-size: 20px;
       line-height: 1.1;
       color: #d5e8ff;
-      min-height: 48px;
+      min-height: 36px;
       display: flex;
       align-items: center;
     }
@@ -257,28 +281,34 @@
     }
 
     .view {
-      padding: 12px;
+      padding: 8px;
       display: grid;
-      gap: 12px;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 8px;
+      min-height: 0;
     }
 
     .view-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 8px;
+      min-height: 0;
     }
 
     .card {
       border: 3px solid var(--line-dark);
       outline: 2px solid #4f7baa;
       background: rgba(13, 31, 50, 0.84);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
 
     .card-head {
-      padding: 8px 10px;
+      padding: 6px 8px;
       border-bottom: 3px solid #0f2239;
       font-family: 'Press Start 2P', monospace;
-      font-size: 10px;
+      font-size: 8px;
       letter-spacing: 0.4px;
       color: #d4e8ff;
       text-transform: uppercase;
@@ -286,9 +316,49 @@
         linear-gradient(180deg, rgba(117, 168, 218, 0.16), rgba(30, 52, 79, 0.32));
     }
 
-    .canvas-wrap {
+    .viewer-toolbar {
+      border: 3px solid var(--line-dark);
+      outline: 2px solid #4f7baa;
+      background: rgba(13, 31, 50, 0.84);
+      padding: 6px;
       display: grid;
-      place-items: center;
+      grid-template-columns: auto auto minmax(120px, 1fr) auto auto auto;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .viewer-toolbar label {
+      font-size: 8px;
+      white-space: nowrap;
+    }
+
+    .viewer-toolbar input[type="range"] {
+      min-height: 20px;
+      height: 20px;
+      padding: 0;
+      border-width: 2px;
+      outline-width: 1px;
+      cursor: ew-resize;
+    }
+
+    .zoom-btn {
+      min-height: 24px;
+      width: 42px;
+      padding: 0;
+      font-size: 10px;
+    }
+
+    .zoom-value {
+      text-align: center;
+      font-size: 18px;
+      min-width: 52px;
+      white-space: nowrap;
+    }
+
+    .canvas-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
       aspect-ratio: 1 / 1;
       background:
         linear-gradient(45deg, var(--checker-a) 25%, transparent 25%),
@@ -298,29 +368,38 @@
         var(--checker-b);
       background-size: 24px 24px;
       background-position: 0 0, 0 12px, 12px -12px, -12px 0;
-      padding: 10px;
+      padding: 8px;
+      overflow: hidden;
+      min-height: 0;
+      position: relative;
     }
 
     canvas {
-      max-width: 100%;
-      max-height: 100%;
+      width: 320px;
+      height: 320px;
+      min-width: 320px;
+      min-height: 320px;
       border: 3px solid #0f2239;
       outline: 2px solid #4575a9;
       image-rendering: pixelated;
       image-rendering: crisp-edges;
       background: #0d1a2b;
+      display: block;
+      transform-origin: center center;
     }
 
     .palette {
-      min-height: 52px;
+      min-height: 42px;
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
-      gap: 6px;
-      padding: 12px;
+      gap: 5px;
+      padding: 8px;
+      max-height: 140px;
+      overflow: auto;
     }
 
     .swatch {
-      height: 34px;
+      height: 28px;
       border: 2px solid #0c1d32;
       outline: 1px solid rgba(210, 231, 255, 0.3);
       position: relative;
@@ -331,7 +410,7 @@
       position: absolute;
       left: 4px;
       bottom: 1px;
-      font-size: 14px;
+      font-size: 11px;
       color: rgba(255, 255, 255, 0.92);
       text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
       font-family: 'VT323', monospace;
@@ -341,38 +420,70 @@
 
     @media (max-width: 1024px) {
       body {
-        padding: 14px;
+        height: auto;
+        min-height: 100vh;
+        overflow: auto;
+        padding: 10px;
       }
 
       .shell {
+        height: auto;
         grid-template-columns: 1fr;
       }
 
       .view-grid {
         grid-template-columns: 1fr;
       }
+
+      canvas {
+        width: 280px;
+        height: 280px;
+        min-width: 280px;
+        min-height: 280px;
+      }
     }
 
     @media (max-width: 640px) {
       body {
-        font-size: 20px;
+        font-size: 16px;
+      }
+
+      .site-logo {
+        max-width: 140px;
+        max-height: 72px;
       }
 
       .title {
-        font-size: 13px;
+        font-size: 10px;
       }
 
       .subtitle {
-        font-size: 24px;
+        font-size: 16px;
       }
 
       input,
       select {
-        font-size: 24px;
+        font-size: 18px;
       }
 
       button {
-        font-size: 10px;
+        font-size: 8px;
+      }
+
+      .viewer-toolbar {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+
+      .viewer-toolbar label {
+        grid-column: 1 / span 3;
+      }
+
+      #zoomRange {
+        grid-column: 1 / span 3;
+      }
+
+      .zoom-value {
+        grid-column: 3 / 4;
       }
     }
   </style>
@@ -380,6 +491,9 @@
 <body>
   <main class="shell">
     <section class="panel controls">
+      <div class="brand">
+        <img src="./assets/logo.png" alt="Logo do site" class="site-logo" />
+      </div>
       <h1 class="title">Pixel Art Converter</h1>
       <p class="subtitle">
         Faz upload da imagem, reduz para grid real e limita a paleta para deixar o sprite consistente.
@@ -394,7 +508,12 @@
       <div class="row">
         <div class="field">
           <label for="targetWidth">Largura final (px)</label>
-          <input id="targetWidth" type="number" min="8" max="512" step="1" value="64" />
+          <select id="targetWidth">
+            <option value="32">32</option>
+            <option value="64" selected>64</option>
+            <option value="128">128</option>
+            <option value="512">512</option>
+          </select>
         </div>
         <div class="field">
           <label for="targetHeight">Altura final (px)</label>
@@ -460,18 +579,27 @@
     </section>
 
     <section class="panel view">
+      <div class="viewer-toolbar">
+        <label for="zoomRange">Zoom sincronizado</label>
+        <button id="zoomOutBtn" type="button" class="zoom-btn btn-soft">-</button>
+        <input id="zoomRange" type="range" min="1" max="8" step="0.05" value="1" />
+        <button id="zoomResetBtn" type="button" class="zoom-btn btn-soft">1x</button>
+        <button id="zoomInBtn" type="button" class="zoom-btn btn-soft">+</button>
+        <span id="zoomValue" class="zoom-value">1.00x</span>
+      </div>
+
       <div class="view-grid">
         <article class="card">
           <div class="card-head">Entrada</div>
-          <div class="canvas-wrap">
-            <canvas id="inputCanvas" width="420" height="420"></canvas>
+          <div class="canvas-wrap" id="inputWrap">
+            <canvas id="inputCanvas" width="320" height="320"></canvas>
           </div>
         </article>
 
         <article class="card">
           <div class="card-head">Saida Pixel Art</div>
-          <div class="canvas-wrap">
-            <canvas id="outputCanvas" width="420" height="420"></canvas>
+          <div class="canvas-wrap" id="outputWrap">
+            <canvas id="outputCanvas" width="320" height="320" hidden></canvas>
           </div>
         </article>
       </div>
@@ -498,16 +626,30 @@
     const downloadBtn = document.getElementById('downloadBtn');
     const statusEl = document.getElementById('status');
     const paletteEl = document.getElementById('palette');
+    const inputWrap = document.getElementById('inputWrap');
+    const outputWrap = document.getElementById('outputWrap');
     const inputCanvas = document.getElementById('inputCanvas');
     const outputCanvas = document.getElementById('outputCanvas');
+    const zoomRangeInput = document.getElementById('zoomRange');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    const zoomResetBtn = document.getElementById('zoomResetBtn');
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomValueEl = document.getElementById('zoomValue');
 
     const state = {
       image: null,
       fileName: 'pixel_art',
       lowResCanvas: null,
       scaledCanvas: null,
-      palette: []
+      palette: [],
+      viewerZoom: 1,
+      viewerZoomTarget: 1,
+      viewerZoomAnimFrame: null
     };
+
+    const VIEW_ZOOM_MIN = 1;
+    const VIEW_ZOOM_MAX = 8;
+    const VIEW_ZOOM_STEP = 0.15;
 
     const PRESET_PALETTES = {
       gameboy: {
@@ -553,6 +695,69 @@
       const clamped = clamp(safeValue, min, max);
       inputEl.value = String(clamped);
       return clamped;
+    }
+
+    function applyViewerZoom(zoomValue) {
+      zoomValueEl.textContent = `${zoomValue.toFixed(2)}x`;
+      [inputCanvas, outputCanvas].forEach((canvas) => {
+        canvas.style.transform = `scale(${zoomValue})`;
+      });
+    }
+
+    function animateViewerZoom() {
+      const delta = state.viewerZoomTarget - state.viewerZoom;
+      if (Math.abs(delta) < 0.005) {
+        state.viewerZoom = state.viewerZoomTarget;
+        applyViewerZoom(state.viewerZoom);
+        state.viewerZoomAnimFrame = null;
+        return;
+      }
+
+      state.viewerZoom += delta * 0.24;
+      applyViewerZoom(state.viewerZoom);
+      state.viewerZoomAnimFrame = window.requestAnimationFrame(animateViewerZoom);
+    }
+
+    function setViewerZoom(value, { instant = false } = {}) {
+      const clampedZoom = Math.round(clamp(value, VIEW_ZOOM_MIN, VIEW_ZOOM_MAX) * 100) / 100;
+      state.viewerZoomTarget = clampedZoom;
+      zoomRangeInput.value = String(clampedZoom);
+
+      if (instant) {
+        if (state.viewerZoomAnimFrame) {
+          window.cancelAnimationFrame(state.viewerZoomAnimFrame);
+          state.viewerZoomAnimFrame = null;
+        }
+        state.viewerZoom = clampedZoom;
+        applyViewerZoom(state.viewerZoom);
+        return;
+      }
+
+      if (!state.viewerZoomAnimFrame) {
+        state.viewerZoomAnimFrame = window.requestAnimationFrame(animateViewerZoom);
+      }
+    }
+
+    function adjustViewerZoom(delta) {
+      setViewerZoom(state.viewerZoomTarget + delta);
+    }
+
+    function handleViewerWheel(event) {
+      event.preventDefault();
+      const rawDelta = -(event.deltaY * 0.0022);
+      const delta = clamp(rawDelta, -0.4, 0.4);
+      adjustViewerZoom(delta);
+    }
+
+    function resetOutputView() {
+      outputCanvas.hidden = true;
+      const outputCtx = outputCanvas.getContext('2d');
+      outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+      paletteEl.innerHTML = '';
+      state.lowResCanvas = null;
+      state.scaledCanvas = null;
+      state.palette = [];
+      downloadBtn.disabled = true;
     }
 
     function drawImageFit(canvas, source, smooth) {
@@ -832,7 +1037,7 @@
         state.fileName = rawName.replace(/\.[^.]+$/, '') || 'pixel_art';
         updateHeightFromWidth();
         drawImageFit(inputCanvas, img, true);
-        drawImageFit(outputCanvas, img, false);
+        resetOutputView();
         if (source === 'paste') {
           setStatus('Imagem colada com sucesso. Clique em converter.', 'ok');
           return;
@@ -912,7 +1117,9 @@
         state.scaledCanvas = scaledCanvas;
         state.palette = palette;
 
+        outputCanvas.hidden = false;
         drawImageFit(outputCanvas, scaledCanvas, false);
+        setViewerZoom(state.viewerZoomTarget, { instant: true });
         updatePaletteUI(palette);
 
         downloadBtn.disabled = false;
@@ -949,11 +1156,21 @@
     targetWidthInput.addEventListener('input', updateHeightFromWidth);
     lockAspectInput.addEventListener('change', updateHeightFromWidth);
     document.addEventListener('paste', handlePaste);
+    inputWrap.addEventListener('wheel', handleViewerWheel, { passive: false });
+    outputWrap.addEventListener('wheel', handleViewerWheel, { passive: false });
+    zoomRangeInput.addEventListener('input', () => {
+      setViewerZoom(Number.parseFloat(zoomRangeInput.value) || VIEW_ZOOM_MIN);
+    });
+    zoomOutBtn.addEventListener('click', () => adjustViewerZoom(-VIEW_ZOOM_STEP));
+    zoomInBtn.addEventListener('click', () => adjustViewerZoom(VIEW_ZOOM_STEP));
+    zoomResetBtn.addEventListener('click', () => setViewerZoom(1));
 
     convertBtn.addEventListener('click', convertImage);
     downloadBtn.addEventListener('click', downloadResult);
 
     syncPaletteMode();
+    resetOutputView();
+    setViewerZoom(1, { instant: true });
   </script>
 </body>
 </html>
