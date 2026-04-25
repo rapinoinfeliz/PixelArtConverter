@@ -1358,8 +1358,9 @@
         updatePaletteUI(state.palette);
       }
 
-      function replaceColor(oldHex, newHex) {
+      function replaceColor(oldHex, newHex, saveHistory = true) {
         if (!state.lowResCanvas || !state.palette || !state.workingData) return;
+        if (saveHistory) saveStateToHistory();
 
         const oldRgb = hexToRgb(oldHex);
         const newRgb = hexToRgb(newHex);
@@ -1530,6 +1531,10 @@
                });
             }
             
+            const notifyChange = (hex) => {
+               if (globalPicker.onLiveUpdate) globalPicker.onLiveUpdate(hex);
+            };
+            
             const updateFromRGB = () => {
               const r = parseInt(ccpR.value);
               const g = parseInt(ccpG.value);
@@ -1537,6 +1542,7 @@
               const hex = rgbToHex(r, g, b);
               ccpHex.value = hex;
               ccpPreview.style.background = hex;
+              notifyChange(hex);
             };
             
             const updateFromHex = () => {
@@ -1546,6 +1552,7 @@
                  ccpG.value = rgb[1];
                  ccpB.value = rgb[2];
                  ccpPreview.style.background = ccpHex.value;
+                 notifyChange(ccpHex.value);
               }
             };
             
@@ -1556,11 +1563,11 @@
             
             ccpCancel.addEventListener('click', () => {
               globalPicker.style.display = 'none';
+              if (globalPicker.onCancel) globalPicker.onCancel();
             });
             
             ccpApply.addEventListener('click', () => {
                globalPicker.style.display = 'none';
-               if (globalPicker.onApply) globalPicker.onApply(ccpHex.value);
             });
         }
 
@@ -1641,11 +1648,20 @@
             globalPicker.style.top = topPos + 'px';
             globalPicker.style.left = leftPos + 'px';
             
-            globalPicker.onApply = (newHex) => {
+            saveStateToHistory();
+            let currentSwatchHex = item.dataset.color;
+            
+            globalPicker.onLiveUpdate = (newHex) => {
+              if (currentSwatchHex === newHex) return;
               item.style.background = newHex;
               label.textContent = newHex;
-              replaceColor(item.dataset.color, newHex);
+              replaceColor(currentSwatchHex, newHex, false);
               item.dataset.color = newHex;
+              currentSwatchHex = newHex;
+            };
+            
+            globalPicker.onCancel = () => {
+              undoLastAction();
             };
           });
 
