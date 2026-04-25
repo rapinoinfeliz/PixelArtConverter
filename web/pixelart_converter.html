@@ -1483,7 +1483,14 @@
             globalPicker.style.background = '#162b43';
             globalPicker.style.boxShadow = '0 8px 32px rgba(0,0,0,0.8)';
             globalPicker.innerHTML = `
-              <div style="font-size: 14px; margin-bottom: 8px;">Ajustar Cor</div>
+              <div style="font-size: 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <span>Ajustar Cor</span>
+                <button id="ccpEyeDropper" class="icon-btn" title="Conta-gotas" style="opacity: 0.8;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
+                   <svg width="14" height="14" viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+                     <path fill="currentColor" d="M12 0h2v2h-2V0zm-2 2h2v2h-2V2zM8 4h2v2H8V4zM6 6h2v2H6V6zM4 8h2v2H4V8zM0 14v-4h2v-2h2v2h2v2H4v2H0zm2-2v-2h2v2H2z"/>
+                   </svg>
+                </button>
+              </div>
               <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center;">
                 <div id="ccpPreview" style="width: 32px; height: 32px; border: 2px solid #091424;"></div>
                 <input type="text" id="ccpHex" style="flex: 1; height: 32px; margin: 0; font-size: 16px; padding: 4px; border: 2px solid #091424; background: #0d1a2b; color: #fff;" />
@@ -1507,6 +1514,21 @@
             const ccpPreview = document.getElementById('ccpPreview');
             const ccpApply = document.getElementById('ccpApply');
             const ccpCancel = document.getElementById('ccpCancel');
+            const ccpEyeDropper = document.getElementById('ccpEyeDropper');
+            
+            if (!window.EyeDropper) {
+               ccpEyeDropper.style.display = 'none';
+            } else {
+               ccpEyeDropper.addEventListener('click', async () => {
+                  try {
+                     const eyeDropper = new EyeDropper();
+                     const result = await eyeDropper.open();
+                     ccpHex.value = result.sRGBHex;
+                     const event = new Event('change');
+                     ccpHex.dispatchEvent(event);
+                  } catch(e) {}
+               });
+            }
             
             const updateFromRGB = () => {
               const r = parseInt(ccpR.value);
