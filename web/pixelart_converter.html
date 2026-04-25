@@ -1800,65 +1800,95 @@
            numColorsInput.value = Math.min(Math.max(detectedK, 2), 64);
         }
         
-        const runLengths = {};
+        const rowDiffs = new Float32Array(h);
+        let rowDiffAvg = 0;
+        for (let y = 1; y < h; y++) {
+           let diff = 0;
+           for (let x = 0; x < w; x++) {
+              const i1 = (y*w + x)*4;
+              const i2 = ((y-1)*w + x)*4;
+              diff += Math.abs(data[i1]-data[i2]) + Math.abs(data[i1+1]-data[i2+1]) + Math.abs(data[i1+2]-data[i2+2]) + Math.abs(data[i1+3]-data[i2+3]);
+           }
+           rowDiffs[y] = diff;
+           rowDiffAvg += diff;
+        }
+        rowDiffAvg /= h;
+
+        const colDiffs = new Float32Array(w);
+        let colDiffAvg = 0;
+        for (let x = 1; x < w; x++) {
+           let diff = 0;
+           for (let y = 0; y < h; y++) {
+              const i1 = (y*w + x)*4;
+              const i2 = (y*w + (x-1))*4;
+              diff += Math.abs(data[i1]-data[i2]) + Math.abs(data[i1+1]-data[i2+1]) + Math.abs(data[i1+2]-data[i2+2]) + Math.abs(data[i1+3]-data[i2+3]);
+           }
+           colDiffs[x] = diff;
+           colDiffAvg += diff;
+        }
+        colDiffAvg /= w;
         
-        const checkRun = (len) => {
-          if (len > 2 && len < w / 2) {
-            runLengths[len] = (runLengths[len] || 0) + 1;
-          }
+        const findPeaks = (diffs, avg, length) => {
+           const peaks = [];
+           let inPeak = false;
+           let peakSum = 0;
+           let peakWeight = 0;
+           const threshold = avg * 1.2 + 100;
+           for (let i = 1; i < length; i++) {
+              if (diffs[i] > threshold) { 
+                 peakSum += i * diffs[i];
+                 peakWeight += diffs[i];
+                 inPeak = true;
+              } else {
+                 if (inPeak) {
+                    peaks.push(peakSum / peakWeight);
+                    inPeak = false;
+                    peakSum = 0;
+                    peakWeight = 0;
+                 }
+              }
+           }
+           if (inPeak) peaks.push(peakSum / peakWeight);
+           return peaks;
         };
 
-        for (let y = 0; y < h; y++) {
-          let currentRun = 1;
-          let idx = y * w * 4;
-          let lastR = data[idx], lastG = data[idx+1], lastB = data[idx+2];
-          
-          for (let x = 1; x < w; x++) {
-            idx += 4;
-            const r = data[idx], g = data[idx+1], b = data[idx+2];
-            const diff = Math.abs(r-lastR) + Math.abs(g-lastG) + Math.abs(b-lastB);
-            
-            if (diff < 15) {
-              currentRun++;
-            } else {
-              checkRun(currentRun);
-              currentRun = 1;
-              lastR = r; lastG = g; lastB = b;
-            }
-          }
-          checkRun(currentRun);
+        const rowPeaks = findPeaks(rowDiffs, rowDiffAvg, h);
+        const colPeaks = findPeaks(colDiffs, colDiffAvg, w);
+        
+        const dists = [];
+        for (let i = 1; i < rowPeaks.length; i++) dists.push(rowPeaks[i] - rowPeaks[i-1]);
+        for (let i = 1; i < colPeaks.length; i++) dists.push(colPeaks[i] - colPeaks[i-1]);
+        
+        if (dists.length > 0) {
+           const distCounts = {};
+           for(let d of dists) {
+              const rounded = Math.round(d);
+              if (rounded >= 2) {
+                 distCounts[rounded] = (distCounts[rounded] || 0) + 1;
+              }
+           }
+           
+           let bestDist = 0;
+           let maxCount = 0;
+           for(const [distStr, count] of Object.entries(distCounts)) {
+              if (count > maxCount) {
+                 maxCount = count;
+                 bestDist = parseInt(distStr, 10);
+              }
+           }
+           
+           if (bestDist > 0) {
+              let targetW = Math.round(w / bestDist);
+              targetW = Math.min(Math.max(targetW, 1), 512);
+              const exactScale = w / targetW;
+              targetWidthInput.value = targetW;
+              updateHeightFromWidth();
+              setStatus(`Escala detectada: ~${exactScale.toFixed(2)}x. Largura sugerida: ${targetW}px.`, 'ok');
+              return;
+           }
         }
         
-        let bestLen = 0;
-        let maxCount = 0;
-        let secondBestLen = 0;
-        let secondMaxCount = 0;
-        
-        for (const len in runLengths) {
-          if (runLengths[len] > maxCount) {
-            secondMaxCount = maxCount;
-            secondBestLen = bestLen;
-            maxCount = runLengths[len];
-            bestLen = parseInt(len, 10);
-          } else if (runLengths[len] > secondMaxCount) {
-            secondMaxCount = runLengths[len];
-            secondBestLen = parseInt(len, 10);
-          }
-        }
-        
-        let exactScale = bestLen;
-        if (secondMaxCount > maxCount * 0.1 && Math.abs(bestLen - secondBestLen) === 1) {
-            exactScale = ((bestLen * maxCount) + (secondBestLen * secondMaxCount)) / (maxCount + secondMaxCount);
-        }
-        
-        if (exactScale > 0) {
-          const targetW = Math.round(w / exactScale);
-          targetWidthInput.value = targetW;
-          updateHeightFromWidth();
-          setStatus(`Escala detectada: ~${exactScale.toFixed(2)}x. Largura sugerida: ${targetW}px.`, 'ok');
-        } else {
-          setStatus('Não foi possível detectar a escala com precisão.', 'err');
-        }
+        setStatus('Não foi possível detectar a escala com precisão.', 'err');
       }
 
       function handlePaste(event) {
