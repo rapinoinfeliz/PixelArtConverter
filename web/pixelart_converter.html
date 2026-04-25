@@ -218,6 +218,31 @@
       outline: none !important;
     }
 
+    input[type="range"] {
+      -webkit-appearance: none;
+      background: transparent;
+      outline: none;
+      border: none;
+      padding: 0;
+      min-height: 20px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 16px;
+      width: 8px;
+      background: var(--accent);
+      border: 2px solid var(--line-dark);
+      cursor: pointer;
+      margin-top: -6px;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 4px;
+      cursor: pointer;
+      background: var(--line-dark);
+      border: 1px solid #1a2f48;
+    }
+
     input[type="checkbox"] {
       width: 18px;
       min-height: 18px;
@@ -701,7 +726,7 @@
         </div>
         <div id="palette" class="palette"></div>
         <div class="palette-actions">
-          <button id="savePaletteBtn" class="btn-soft" type="button" disabled>💾 Salvar Paleta Atual</button>
+
         </div>
       </article>
     </section>
@@ -723,7 +748,7 @@
       const downloadBtn = document.getElementById('downloadBtn');
       const statusEl = document.getElementById('status');
       const paletteEl = document.getElementById('palette');
-      const savePaletteBtn = document.getElementById('savePaletteBtn');
+
       const undoBtn = document.getElementById('undoBtn');
       const gridToggleBtn = document.getElementById('gridToggleBtn');
       const dropZone = document.getElementById('dropZone');
@@ -953,7 +978,7 @@
         state.scaledCanvas = null;
         state.palette = [];
         downloadBtn.disabled = true;
-        savePaletteBtn.disabled = true;
+
       }
 
       function drawImageFit(canvas, source, smooth) {
@@ -1415,8 +1440,10 @@
           const realPixelSize = scale * bounds.ratio;
           
           if (realPixelSize >= 0.5) {
+            outCtx.save();
+            outCtx.globalCompositeOperation = 'difference';
             outCtx.beginPath();
-            outCtx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+            outCtx.strokeStyle = 'rgba(255, 255, 255, 1)';
             outCtx.lineWidth = 1;
             
             for (let c = 0; c <= state.lowResCanvas.width; c++) {
@@ -1430,6 +1457,7 @@
               outCtx.lineTo(bounds.x + bounds.w, ly);
             }
             outCtx.stroke();
+            outCtx.restore();
           }
         }
       }
@@ -1443,18 +1471,75 @@
 
         let globalPicker = document.getElementById('globalColorPicker');
         if (!globalPicker) {
-            globalPicker = document.createElement('input');
-            globalPicker.type = 'color';
+            globalPicker = document.createElement('div');
             globalPicker.id = 'globalColorPicker';
-            globalPicker.style.display = 'block';
+            globalPicker.className = 'card';
+            globalPicker.style.display = 'none';
             globalPicker.style.position = 'fixed';
-            globalPicker.style.width = '1px';
-            globalPicker.style.height = '1px';
-            globalPicker.style.padding = '0';
-            globalPicker.style.border = 'none';
-            globalPicker.style.opacity = '0.01';
             globalPicker.style.zIndex = '999999';
+            globalPicker.style.width = '240px';
+            globalPicker.style.padding = '12px';
+            globalPicker.style.border = '3px solid #0f2239';
+            globalPicker.style.background = '#162b43';
+            globalPicker.style.boxShadow = '0 8px 32px rgba(0,0,0,0.8)';
+            globalPicker.innerHTML = `
+              <div style="font-size: 14px; margin-bottom: 8px;">Ajustar Cor</div>
+              <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center;">
+                <div id="ccpPreview" style="width: 32px; height: 32px; border: 2px solid #091424;"></div>
+                <input type="text" id="ccpHex" style="flex: 1; height: 32px; margin: 0; font-size: 16px; padding: 4px; border: 2px solid #091424; background: #0d1a2b; color: #fff;" />
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px;">R: <input type="range" id="ccpR" min="0" max="255" style="flex: 1; height: 16px; margin: 0;"></label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px;">G: <input type="range" id="ccpG" min="0" max="255" style="flex: 1; height: 16px; margin: 0;"></label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px;">B: <input type="range" id="ccpB" min="0" max="255" style="flex: 1; height: 16px; margin: 0;"></label>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 12px;">
+                <button id="ccpApply" class="btn-accent" style="min-height: 28px; font-size: 14px; padding: 4px;">OK</button>
+                <button id="ccpCancel" class="btn-soft" style="min-height: 28px; font-size: 14px; padding: 4px;">Cancela</button>
+              </div>
+            `;
             document.body.appendChild(globalPicker);
+            
+            const ccpHex = document.getElementById('ccpHex');
+            const ccpR = document.getElementById('ccpR');
+            const ccpG = document.getElementById('ccpG');
+            const ccpB = document.getElementById('ccpB');
+            const ccpPreview = document.getElementById('ccpPreview');
+            const ccpApply = document.getElementById('ccpApply');
+            const ccpCancel = document.getElementById('ccpCancel');
+            
+            const updateFromRGB = () => {
+              const r = parseInt(ccpR.value);
+              const g = parseInt(ccpG.value);
+              const b = parseInt(ccpB.value);
+              const hex = rgbToHex(r, g, b);
+              ccpHex.value = hex;
+              ccpPreview.style.background = hex;
+            };
+            
+            const updateFromHex = () => {
+              const rgb = hexToRgb(ccpHex.value);
+              if (rgb) {
+                 ccpR.value = rgb[0];
+                 ccpG.value = rgb[1];
+                 ccpB.value = rgb[2];
+                 ccpPreview.style.background = ccpHex.value;
+              }
+            };
+            
+            ccpR.addEventListener('input', updateFromRGB);
+            ccpG.addEventListener('input', updateFromRGB);
+            ccpB.addEventListener('input', updateFromRGB);
+            ccpHex.addEventListener('change', updateFromHex);
+            
+            ccpCancel.addEventListener('click', () => {
+              globalPicker.style.display = 'none';
+            });
+            
+            ccpApply.addEventListener('click', () => {
+               globalPicker.style.display = 'none';
+               if (globalPicker.onApply) globalPicker.onApply(ccpHex.value);
+            });
         }
 
         palette.forEach(([r, g, b]) => {
@@ -1515,17 +1600,31 @@
              }
           });
           item.addEventListener('click', (e) => {
-            globalPicker.style.left = e.clientX + 'px';
-            globalPicker.style.top = e.clientY + 'px';
-            globalPicker.value = item.dataset.color;
-            globalPicker.oninput = (ev) => {
-              const newHex = ev.target.value;
+            const rgb = hexToRgb(item.dataset.color);
+            document.getElementById('ccpR').value = rgb[0];
+            document.getElementById('ccpG').value = rgb[1];
+            document.getElementById('ccpB').value = rgb[2];
+            document.getElementById('ccpHex').value = item.dataset.color;
+            document.getElementById('ccpPreview').style.background = item.dataset.color;
+            
+            globalPicker.style.display = 'block';
+            
+            const pickerRect = globalPicker.getBoundingClientRect();
+            let topPos = e.clientY - pickerRect.height - 10;
+            if (topPos < 10) topPos = e.clientY + 20;
+            let leftPos = e.clientX - (pickerRect.width / 2);
+            if (leftPos < 10) leftPos = 10;
+            if (leftPos + pickerRect.width > window.innerWidth) leftPos = window.innerWidth - pickerRect.width - 10;
+            
+            globalPicker.style.top = topPos + 'px';
+            globalPicker.style.left = leftPos + 'px';
+            
+            globalPicker.onApply = (newHex) => {
               item.style.background = newHex;
               label.textContent = newHex;
               replaceColor(item.dataset.color, newHex);
               item.dataset.color = newHex;
             };
-            globalPicker.click();
           });
 
           item.appendChild(label);
@@ -1615,18 +1714,31 @@
         
         let bestLen = 0;
         let maxCount = 0;
+        let secondBestLen = 0;
+        let secondMaxCount = 0;
+        
         for (const len in runLengths) {
           if (runLengths[len] > maxCount) {
+            secondMaxCount = maxCount;
+            secondBestLen = bestLen;
             maxCount = runLengths[len];
             bestLen = parseInt(len, 10);
+          } else if (runLengths[len] > secondMaxCount) {
+            secondMaxCount = runLengths[len];
+            secondBestLen = parseInt(len, 10);
           }
         }
         
-        if (bestLen > 0) {
-          const targetW = Math.round(w / bestLen);
+        let exactScale = bestLen;
+        if (secondMaxCount > maxCount * 0.1 && Math.abs(bestLen - secondBestLen) === 1) {
+            exactScale = ((bestLen * maxCount) + (secondBestLen * secondMaxCount)) / (maxCount + secondMaxCount);
+        }
+        
+        if (exactScale > 0) {
+          const targetW = Math.round(w / exactScale);
           targetWidthInput.value = targetW;
           updateHeightFromWidth();
-          setStatus(`Escala detectada: bloco de ${bestLen}px. Largura ideal sugerida: ${targetW}px.`, 'ok');
+          setStatus(`Escala detectada: ~${exactScale.toFixed(2)}x. Largura sugerida: ${targetW}px.`, 'ok');
         } else {
           setStatus('Não foi possível detectar a escala com precisão.', 'err');
         }
@@ -1774,7 +1886,7 @@
 
           convertBtn.disabled = false;
           downloadBtn.disabled = false;
-          savePaletteBtn.disabled = false;
+
           setStatus(
             `Pronto: ${targetW}x${targetH}px, ${palette.length} cores, paleta ${paletteSelection.label}, escala ${previewScale}x.`,
             'ok'
@@ -1886,36 +1998,7 @@
         if (state.lowResCanvas) renderWorkingData();
       });
 
-      savePaletteBtn.addEventListener('click', () => {
-        if (!state.palette || state.palette.length === 0) return;
-        const name = prompt('Digite um nome para salvar esta paleta:');
-        if (!name || name.trim() === '') return;
-        
-        const key = 'custom_' + Date.now();
-        const customPalette = {
-          label: name.trim(),
-          colors: state.palette.map(([r,g,b]) => rgbToHex(r,g,b))
-        };
-        
-        let customPalettes = {};
-        try {
-          const saved = localStorage.getItem('pixelart_custom_palettes');
-          if (saved) customPalettes = JSON.parse(saved);
-        } catch(e) {}
-        
-        customPalettes[key] = customPalette;
-        localStorage.setItem('pixelart_custom_palettes', JSON.stringify(customPalettes));
-        
-        PRESET_PALETTES[key] = customPalette;
-        const opt = document.createElement('option');
-        opt.value = key;
-        opt.textContent = `Salva: ${customPalette.label}`;
-        palettePresetInput.appendChild(opt);
-        palettePresetInput.value = key;
-        syncPaletteMode();
-        
-        setStatus(`Paleta "${customPalette.label}" salva com sucesso!`, 'ok');
-      });
+
 
       // Atalhos de teclado
       document.addEventListener('keydown', (event) => {
