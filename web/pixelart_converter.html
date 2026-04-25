@@ -92,20 +92,16 @@
     }
 
     .brand {
-      margin: 0 0 8px;
+      margin: 0 0 10px;
       display: flex;
-      justify-content: center;
+      align-items: center;
+      gap: 0;
     }
 
-    .site-logo {
-      width: 100%;
-      max-width: 180px;
-      max-height: 96px;
-      object-fit: contain;
-      border: 2px solid #0f2239;
-      outline: 1px solid #4f7baa;
-      background: rgba(8, 19, 32, 0.45);
-      image-rendering: pixelated;
+    .brand-text {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
     }
 
     .title {
@@ -119,10 +115,22 @@
     }
 
     .subtitle {
-      margin: 0 0 10px;
+      margin: 0;
       color: var(--muted);
-      font-size: 20px;
+      font-size: 14px;
       line-height: 1.1;
+    }
+
+    .drop-zone {
+      border: 2px dashed rgba(110, 164, 215, 0.7);
+      padding: 8px;
+      background: rgba(8, 19, 32, 0.22);
+      transition: border-color 120ms ease, background-color 120ms ease;
+    }
+
+    .drop-zone.active {
+      border-color: var(--accent);
+      background: rgba(255, 210, 63, 0.15);
     }
 
     .field {
@@ -198,6 +206,42 @@
       outline: 2px solid #4f7baa;
       margin: 0;
       accent-color: var(--accent);
+    }
+
+    input[type="file"] {
+      padding: 0;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    input[type="file"]::file-selector-button {
+      height: 100%;
+      border: 0;
+      border-right: 3px solid #4b3205;
+      background: linear-gradient(180deg, #ffd861, #f59e22);
+      color: #1f1804;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      letter-spacing: 0.3px;
+      padding: 0 10px;
+      margin-right: 8px;
+      cursor: pointer;
+      box-shadow: inset -2px 0 0 rgba(0, 0, 0, 0.2);
+    }
+
+    input[type="file"]::-webkit-file-upload-button {
+      height: 100%;
+      border: 0;
+      border-right: 3px solid #4b3205;
+      background: linear-gradient(180deg, #ffd861, #f59e22);
+      color: #1f1804;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      letter-spacing: 0.3px;
+      padding: 0 10px;
+      margin-right: 8px;
+      cursor: pointer;
+      box-shadow: inset -2px 0 0 rgba(0, 0, 0, 0.2);
     }
 
     .check {
@@ -316,45 +360,6 @@
         linear-gradient(180deg, rgba(117, 168, 218, 0.16), rgba(30, 52, 79, 0.32));
     }
 
-    .viewer-toolbar {
-      border: 3px solid var(--line-dark);
-      outline: 2px solid #4f7baa;
-      background: rgba(13, 31, 50, 0.84);
-      padding: 6px;
-      display: grid;
-      grid-template-columns: auto auto minmax(120px, 1fr) auto auto auto;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .viewer-toolbar label {
-      font-size: 8px;
-      white-space: nowrap;
-    }
-
-    .viewer-toolbar input[type="range"] {
-      min-height: 20px;
-      height: 20px;
-      padding: 0;
-      border-width: 2px;
-      outline-width: 1px;
-      cursor: ew-resize;
-    }
-
-    .zoom-btn {
-      min-height: 24px;
-      width: 42px;
-      padding: 0;
-      font-size: 10px;
-    }
-
-    .zoom-value {
-      text-align: center;
-      font-size: 18px;
-      min-width: 52px;
-      white-space: nowrap;
-    }
-
     .canvas-wrap {
       display: flex;
       align-items: center;
@@ -372,6 +377,17 @@
       overflow: hidden;
       min-height: 0;
       position: relative;
+      cursor: default;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .canvas-wrap.can-pan {
+      cursor: grab;
+    }
+
+    .canvas-wrap.dragging {
+      cursor: grabbing;
     }
 
     canvas {
@@ -386,6 +402,12 @@
       background: #0d1a2b;
       display: block;
       transform-origin: center center;
+      pointer-events: none;
+      transition: transform 110ms ease-out;
+    }
+
+    .canvas-wrap.dragging canvas {
+      transition: none;
     }
 
     .palette {
@@ -448,17 +470,12 @@
         font-size: 16px;
       }
 
-      .site-logo {
-        max-width: 140px;
-        max-height: 72px;
-      }
-
       .title {
         font-size: 10px;
       }
 
       .subtitle {
-        font-size: 16px;
+        font-size: 12px;
       }
 
       input,
@@ -469,22 +486,6 @@
       button {
         font-size: 8px;
       }
-
-      .viewer-toolbar {
-        grid-template-columns: 1fr 1fr 1fr;
-      }
-
-      .viewer-toolbar label {
-        grid-column: 1 / span 3;
-      }
-
-      #zoomRange {
-        grid-column: 1 / span 3;
-      }
-
-      .zoom-value {
-        grid-column: 3 / 4;
-      }
     }
   </style>
 </head>
@@ -492,32 +493,28 @@
   <main class="shell">
     <section class="panel controls">
       <div class="brand">
-        <img src="./assets/logo.png" alt="Logo do site" class="site-logo" />
+        <div class="brand-text">
+          <h1 class="title">Pixel Art Converter</h1>
+          <p class="subtitle">
+            Faz upload da imagem, reduz para grid real e limita a paleta para deixar o sprite consistente.
+          </p>
+        </div>
       </div>
-      <h1 class="title">Pixel Art Converter</h1>
-      <p class="subtitle">
-        Faz upload da imagem, reduz para grid real e limita a paleta para deixar o sprite consistente.
-      </p>
 
-      <div class="field">
+      <div class="field drop-zone" id="dropZone">
         <label for="imageInput">Imagem</label>
         <input id="imageInput" type="file" accept="image/*" />
-        <p class="hint">Ou cole com <strong>Ctrl+V</strong> / <strong>Cmd+V</strong> em qualquer lugar da tela.</p>
+        <p class="hint">Cole com <strong>Ctrl+V</strong>/<strong>Cmd+V</strong> ou arraste e solte aqui.</p>
       </div>
 
       <div class="row">
         <div class="field">
           <label for="targetWidth">Largura final (px)</label>
-          <select id="targetWidth">
-            <option value="32">32</option>
-            <option value="64" selected>64</option>
-            <option value="128">128</option>
-            <option value="512">512</option>
-          </select>
+          <input id="targetWidth" type="number" min="1" max="4096" step="1" value="64" />
         </div>
         <div class="field">
           <label for="targetHeight">Altura final (px)</label>
-          <input id="targetHeight" type="number" min="8" max="512" step="1" value="64" />
+          <input id="targetHeight" type="number" min="1" max="4096" step="1" value="64" />
         </div>
       </div>
 
@@ -579,15 +576,6 @@
     </section>
 
     <section class="panel view">
-      <div class="viewer-toolbar">
-        <label for="zoomRange">Zoom sincronizado</label>
-        <button id="zoomOutBtn" type="button" class="zoom-btn btn-soft">-</button>
-        <input id="zoomRange" type="range" min="1" max="8" step="0.05" value="1" />
-        <button id="zoomResetBtn" type="button" class="zoom-btn btn-soft">1x</button>
-        <button id="zoomInBtn" type="button" class="zoom-btn btn-soft">+</button>
-        <span id="zoomValue" class="zoom-value">1.00x</span>
-      </div>
-
       <div class="view-grid">
         <article class="card">
           <div class="card-head">Entrada</div>
@@ -626,15 +614,11 @@
     const downloadBtn = document.getElementById('downloadBtn');
     const statusEl = document.getElementById('status');
     const paletteEl = document.getElementById('palette');
+    const dropZone = document.getElementById('dropZone');
     const inputWrap = document.getElementById('inputWrap');
     const outputWrap = document.getElementById('outputWrap');
     const inputCanvas = document.getElementById('inputCanvas');
     const outputCanvas = document.getElementById('outputCanvas');
-    const zoomRangeInput = document.getElementById('zoomRange');
-    const zoomOutBtn = document.getElementById('zoomOutBtn');
-    const zoomResetBtn = document.getElementById('zoomResetBtn');
-    const zoomInBtn = document.getElementById('zoomInBtn');
-    const zoomValueEl = document.getElementById('zoomValue');
 
     const state = {
       image: null,
@@ -644,12 +628,14 @@
       palette: [],
       viewerZoom: 1,
       viewerZoomTarget: 1,
-      viewerZoomAnimFrame: null
+      viewerZoomAnimFrame: null,
+      viewerPanX: 0,
+      viewerPanY: 0,
+      dragState: null
     };
 
     const VIEW_ZOOM_MIN = 1;
     const VIEW_ZOOM_MAX = 8;
-    const VIEW_ZOOM_STEP = 0.15;
 
     const PRESET_PALETTES = {
       gameboy: {
@@ -697,11 +683,43 @@
       return clamped;
     }
 
-    function applyViewerZoom(zoomValue) {
-      zoomValueEl.textContent = `${zoomValue.toFixed(2)}x`;
-      [inputCanvas, outputCanvas].forEach((canvas) => {
-        canvas.style.transform = `scale(${zoomValue})`;
+    function getViewerPanBounds() {
+      const wrapWidth = inputWrap.clientWidth;
+      const wrapHeight = inputWrap.clientHeight;
+      const baseWidth = inputCanvas.offsetWidth || 320;
+      const baseHeight = inputCanvas.offsetHeight || 320;
+      const scaledWidth = baseWidth * state.viewerZoom;
+      const scaledHeight = baseHeight * state.viewerZoom;
+      return {
+        x: Math.max(0, (scaledWidth - wrapWidth) / 2),
+        y: Math.max(0, (scaledHeight - wrapHeight) / 2)
+      };
+    }
+
+    function clampViewerPan(x, y) {
+      const bounds = getViewerPanBounds();
+      return {
+        x: clamp(x, -bounds.x, bounds.x),
+        y: clamp(y, -bounds.y, bounds.y)
+      };
+    }
+
+    function updatePanCursor() {
+      const canPan = state.viewerZoom > 1.01;
+      [inputWrap, outputWrap].forEach((wrap) => {
+        wrap.classList.toggle('can-pan', canPan);
       });
+    }
+
+    function applyViewerZoom(zoomValue) {
+      const clampedPan = clampViewerPan(state.viewerPanX, state.viewerPanY);
+      state.viewerPanX = clampedPan.x;
+      state.viewerPanY = clampedPan.y;
+
+      [inputCanvas, outputCanvas].forEach((canvas) => {
+        canvas.style.transform = `translate(${state.viewerPanX}px, ${state.viewerPanY}px) scale(${zoomValue})`;
+      });
+      updatePanCursor();
     }
 
     function animateViewerZoom() {
@@ -721,7 +739,6 @@
     function setViewerZoom(value, { instant = false } = {}) {
       const clampedZoom = Math.round(clamp(value, VIEW_ZOOM_MIN, VIEW_ZOOM_MAX) * 100) / 100;
       state.viewerZoomTarget = clampedZoom;
-      zoomRangeInput.value = String(clampedZoom);
 
       if (instant) {
         if (state.viewerZoomAnimFrame) {
@@ -742,6 +759,40 @@
       setViewerZoom(state.viewerZoomTarget + delta);
     }
 
+    function startViewerDrag(event) {
+      if (state.viewerZoom <= 1.01) return;
+      if (event.button !== 0) return;
+      event.preventDefault();
+      state.dragState = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        panX: state.viewerPanX,
+        panY: state.viewerPanY
+      };
+      [inputWrap, outputWrap].forEach((wrap) => wrap.classList.add('dragging'));
+    }
+
+    function moveViewerDrag(event) {
+      if (!state.dragState) return;
+      if (event.pointerId !== state.dragState.pointerId) return;
+      event.preventDefault();
+      const dx = event.clientX - state.dragState.startX;
+      const dy = event.clientY - state.dragState.startY;
+      const pan = clampViewerPan(state.dragState.panX + dx, state.dragState.panY + dy);
+      state.viewerPanX = pan.x;
+      state.viewerPanY = pan.y;
+      applyViewerZoom(state.viewerZoom);
+    }
+
+    function endViewerDrag(event) {
+      if (!state.dragState) return;
+      if (event && event.pointerId !== state.dragState.pointerId) return;
+      state.dragState = null;
+      [inputWrap, outputWrap].forEach((wrap) => wrap.classList.remove('dragging'));
+      updatePanCursor();
+    }
+
     function handleViewerWheel(event) {
       event.preventDefault();
       const rawDelta = -(event.deltaY * 0.0022);
@@ -751,6 +802,9 @@
 
     function resetOutputView() {
       outputCanvas.hidden = true;
+      state.viewerPanX = 0;
+      state.viewerPanY = 0;
+      endViewerDrag();
       const outputCtx = outputCanvas.getContext('2d');
       outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
       paletteEl.innerHTML = '';
@@ -1017,9 +1071,9 @@
 
     function updateHeightFromWidth() {
       if (!state.image || !lockAspectInput.checked) return;
-      const width = getCleanInt(targetWidthInput, 8, 512, 64);
+      const width = getCleanInt(targetWidthInput, 1, 4096, 64);
       const ratio = state.image.height / state.image.width;
-      const computedHeight = clamp(Math.round(width * ratio), 8, 512);
+      const computedHeight = clamp(Math.round(width * ratio), 1, 4096);
       targetHeightInput.value = String(computedHeight);
     }
 
@@ -1040,6 +1094,10 @@
         resetOutputView();
         if (source === 'paste') {
           setStatus('Imagem colada com sucesso. Clique em converter.', 'ok');
+          return;
+        }
+        if (source === 'drop') {
+          setStatus('Imagem arrastada com sucesso. Clique em converter.', 'ok');
           return;
         }
         setStatus('Imagem carregada. Clique em converter.', 'ok');
@@ -1063,17 +1121,48 @@
       }
     }
 
+    function extractImageFile(fileList) {
+      if (!fileList || fileList.length === 0) return null;
+      for (const file of fileList) {
+        if (file.type && file.type.startsWith('image/')) {
+          return file;
+        }
+      }
+      return null;
+    }
+
+    function handleDropZoneHover(event) {
+      event.preventDefault();
+      dropZone.classList.add('active');
+    }
+
+    function handleDropZoneLeave(event) {
+      event.preventDefault();
+      dropZone.classList.remove('active');
+    }
+
+    function handleDropZoneDrop(event) {
+      event.preventDefault();
+      dropZone.classList.remove('active');
+      const imageFile = extractImageFile(event.dataTransfer?.files);
+      if (!imageFile) {
+        setStatus('Arraste um arquivo de imagem valido.', 'err');
+        return;
+      }
+      handleImageFile(imageFile, 'drop');
+    }
+
     function convertImage() {
       if (!state.image) {
         setStatus('Envie uma imagem primeiro.', 'err');
         return;
       }
 
-      const targetW = getCleanInt(targetWidthInput, 8, 512, 64);
-      let targetH = getCleanInt(targetHeightInput, 8, 512, 64);
+      const targetW = getCleanInt(targetWidthInput, 1, 4096, 64);
+      let targetH = getCleanInt(targetHeightInput, 1, 4096, 64);
       if (lockAspectInput.checked) {
         const ratio = state.image.height / state.image.width;
-        targetH = clamp(Math.round(targetW * ratio), 8, 512);
+        targetH = clamp(Math.round(targetW * ratio), 1, 4096);
         targetHeightInput.value = String(targetH);
       }
 
@@ -1158,12 +1247,33 @@
     document.addEventListener('paste', handlePaste);
     inputWrap.addEventListener('wheel', handleViewerWheel, { passive: false });
     outputWrap.addEventListener('wheel', handleViewerWheel, { passive: false });
-    zoomRangeInput.addEventListener('input', () => {
-      setViewerZoom(Number.parseFloat(zoomRangeInput.value) || VIEW_ZOOM_MIN);
+    inputWrap.addEventListener('pointerdown', startViewerDrag);
+    outputWrap.addEventListener('pointerdown', startViewerDrag);
+    window.addEventListener('pointermove', moveViewerDrag);
+    window.addEventListener('pointerup', endViewerDrag);
+    window.addEventListener('pointercancel', endViewerDrag);
+    dropZone.addEventListener('dragenter', handleDropZoneHover);
+    dropZone.addEventListener('dragover', handleDropZoneHover);
+    dropZone.addEventListener('dragleave', handleDropZoneLeave);
+    dropZone.addEventListener('drop', handleDropZoneDrop);
+    document.addEventListener('dragover', (event) => {
+      if (extractImageFile(event.dataTransfer?.files)) {
+        event.preventDefault();
+      }
     });
-    zoomOutBtn.addEventListener('click', () => adjustViewerZoom(-VIEW_ZOOM_STEP));
-    zoomInBtn.addEventListener('click', () => adjustViewerZoom(VIEW_ZOOM_STEP));
-    zoomResetBtn.addEventListener('click', () => setViewerZoom(1));
+    document.addEventListener('dragleave', (event) => {
+      if (event.target === document.documentElement || event.target === document.body) {
+        dropZone.classList.remove('active');
+      }
+    });
+    document.addEventListener('drop', (event) => {
+      const imageFile = extractImageFile(event.dataTransfer?.files);
+      if (!imageFile) return;
+      event.preventDefault();
+      dropZone.classList.remove('active');
+      if (dropZone.contains(event.target)) return;
+      handleImageFile(imageFile, 'drop');
+    });
 
     convertBtn.addEventListener('click', convertImage);
     downloadBtn.addEventListener('click', downloadResult);
